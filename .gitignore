@@ -25,3 +25,6 @@ frontend/out/
 .DS_Store
 .vscode/
 .idea/
+
+# Исходник демо-анимации: HTML коммитим, сырой рендер — нет
+video/*.mp4

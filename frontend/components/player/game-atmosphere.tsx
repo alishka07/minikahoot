@@ -13,10 +13,12 @@ const shapes = [
   { symbol: '■', x: -45, y: 0, size: 17, color: '#22d3ee', depth: .5, delay: -3.5 },
 ];
 
-export function GameAtmosphere({ gathered = false }: { gathered?: boolean }) {
+// 'stack' — плотный столбик за карточкой; 'draw' — фигуры лишь подтягиваются
+// к центру и остаются фоном, чтобы не мешать читать страницу.
+export function GameAtmosphere({ focus }: { focus?: 'stack' | 'draw' }) {
   const layer = useRef<HTMLDivElement>(null);
-  const scattered = useRef(!gathered);
-  useEffect(() => { scattered.current = !gathered; }, [gathered]);
+  const scattered = useRef(focus !== 'stack');
+  useEffect(() => { scattered.current = focus !== 'stack'; }, [focus]);
   useEffect(() => {
     let frame = 0;
     const move = (x: number, y: number) => {
@@ -33,5 +35,5 @@ export function GameAtmosphere({ gathered = false }: { gathered?: boolean }) {
     window.addEventListener('deviceorientation', onOrientation, { passive: true });
     return () => { cancelAnimationFrame(frame); window.removeEventListener('pointermove', onPointer); window.removeEventListener('deviceorientation', onOrientation); };
   }, []);
-  return <div ref={layer} className={`game-atmosphere${gathered ? ' gathered' : ''}`} aria-hidden="true">{shapes.map((shape, index) => <span key={index} style={{ width: shape.size, height: shape.size, color: shape.color, animationDelay: `${shape.delay}s`, '--depth': shape.depth, '--x': shape.x, '--y': shape.y, '--i': index, '--stack': `${(index - (shapes.length - 1) / 2) * 15}px` } as React.CSSProperties}>{shape.symbol}</span>)}</div>;
+  return <div ref={layer} className={`game-atmosphere${focus ? ` ${focus}` : ''}`} aria-hidden="true">{shapes.map((shape, index) => <span key={index} style={{ width: shape.size, height: shape.size, color: shape.color, animationDelay: `${shape.delay}s`, '--depth': shape.depth, '--x': shape.x, '--y': shape.y, '--i': index, '--stack': `${(index - (shapes.length - 1) / 2) * 15}px` } as React.CSSProperties}>{shape.symbol}</span>)}</div>;
 }

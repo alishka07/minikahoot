@@ -30,6 +30,7 @@ export function HostApp({ onExit }: { onExit: () => void }) {
   const [completedRounds, setCompletedRounds] = useState(0);
   const [gameFinished, setGameFinished] = useState(false);
   const socket = useRef<WebSocket | null>(null);
+  const hostToken = useRef('');
   const current = questions[questionIndex] ?? questions[0];
   const joinUrl = typeof window === 'undefined' ? `http://localhost:3000/?room=${roomCode}` : `${window.location.origin}/?room=${roomCode}`;
 
@@ -58,7 +59,8 @@ export function HostApp({ onExit }: { onExit: () => void }) {
     try {
       const response = await fetch(`${API}/rooms/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
       if (response.ok) {
-        const room = await response.json() as { room_code: string }; code = room.room_code; setRoomCode(code);
+        const room = await response.json() as { room_code: string; host_token?: string }; code = room.room_code; setRoomCode(code);
+        hostToken.current = room.host_token ?? '';
         liveQuestions = await Promise.all(questions.filter(q => q.text.trim()).map(async q => {
           const savedResponse = await fetch(`${API}/rooms/${code}/questions/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: q.text, options: q.options, correct_option: q.correctOptions[0], correct_options: q.correctOptions, is_multiple: q.multiple, image: q.image ?? '' }) });
           const saved = await savedResponse.json() as { id: number };
@@ -66,7 +68,7 @@ export function HostApp({ onExit }: { onExit: () => void }) {
         }));
         setQuestions(liveQuestions);
       }
-      const ws = new WebSocket(`${WS}/${code}/?role=host`); socket.current = ws;
+      const ws = new WebSocket(`${WS}/${code}/?role=host&token=${hostToken.current}`); socket.current = ws;
       ws.onopen = () => setConnected(true); ws.onclose = () => setConnected(false);
       ws.onmessage = ({ data }) => {
         const event = JSON.parse(data);

@@ -1,8 +1,9 @@
 'use client';
 
 const answers = ['▲', '◆', '●', '■'];
-// Числа заканчиваются на 2-4, чтобы русское «ответа» оставалось согласованным.
-const counts = [24, 33, 42, 53, 62, 73, 84];
+// Счётчик проходит все значения: на паузе он стоит на 24 и 84, а обе эти формы
+// согласуются с русским «ответа» — промежуточные числа только мелькают.
+const counts = Array.from({ length: 61 }, (_, index) => 24 + index);
 
 export function QuizDemo({ counter, question }: { counter: string; question: string }) {
   return <div className="quiz-demo" aria-hidden="true">

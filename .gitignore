@@ -1,0 +1,27 @@
+# Python / Django
+__pycache__/
+*.pyc
+backend/db.sqlite3
+backend/test-db.sqlite3
+backend/smoke.sqlite3
+backend/quiz/settings_smoke.py
+*.sqlite3
+
+# Секреты - никогда не коммитим
+.env
+.env.local
+.env.*.local
+backend/.env
+
+# Node / фронтенд
+frontend/node_modules/
+frontend/.next/
+frontend/.vinext/
+frontend/.wrangler/
+frontend/dist/
+frontend/out/
+
+# IDE / OS
+.DS_Store
+.vscode/
+.idea/

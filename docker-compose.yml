@@ -1,0 +1,33 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment: { POSTGRES_DB: quiz, POSTGRES_USER: quiz, POSTGRES_PASSWORD: quiz }
+    ports: ['5432:5432']
+    volumes: [quiz_pg:/var/lib/postgresql/data]
+    healthcheck: { test: ['CMD-SHELL', 'pg_isready -U quiz'], interval: 5s, retries: 10 }
+  redis:
+    image: redis:7.4-alpine
+    ports: ['6379:6379']
+    healthcheck: { test: ['CMD', 'redis-cli', 'ping'], interval: 5s, retries: 10 }
+  backend:
+    image: python:3.13-slim
+    working_dir: /app
+    volumes: ['./backend:/app']
+    command: sh -c "pip install -r requirements.txt && python manage.py migrate && daphne -b 0.0.0.0 -p 8000 --proxy-headers quiz.asgi:application"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_DB: quiz
+      POSTGRES_USER: quiz
+      POSTGRES_PASSWORD: quiz
+      REDIS_URL: redis://redis:6379/0
+      CORS_ALLOWED_ORIGINS: http://localhost:3000,http://192.168.1.73:3000
+      # Тайминги игры — полный список в README
+      QUIZ_QUESTION_SECONDS: '10'
+      QUIZ_COUNTDOWN_MS: '3000'
+      QUIZ_AUTO_ADVANCE: '0'
+      QUIZ_REQUIRE_HOST_TOKEN: '0'
+    ports: ['8000:8000']
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+volumes: { quiz_pg: {} }

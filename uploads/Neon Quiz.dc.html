@@ -1,0 +1,1213 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800&family=Manrope:wght@400;600;800&display=swap" rel="stylesheet">
+<script src="nq-qr.js"></script>
+<style>
+html,body{margin:0;background:#07050d;color:#fff;font-family:Manrope,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+a{color:#22E0FF;text-decoration:none}a:hover{color:#FF2E88}
+input{font-family:inherit}
+@keyframes nqPulse{0%,100%{opacity:.55;transform:scale(1)}50%{opacity:1;transform:scale(1.04)}}
+@keyframes nqRise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes nqSpin{to{transform:rotate(360deg)}}
+@keyframes nqGlow{0%,100%{box-shadow:0 0 30px rgba(255,46,136,.25)}50%{box-shadow:0 0 60px rgba(34,224,255,.35)}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:radial-gradient(900px 600px at 8% -10%,rgba(255,46,136,.18),transparent 60%),radial-gradient(800px 700px at 95% 5%,rgba(34,224,255,.16),transparent 60%),radial-gradient(700px 600px at 50% 110%,rgba(124,60,255,.2),transparent 60%),#07050d;padding:22px 24px 34px;box-sizing:border-box;display:flex;flex-direction:column;gap:18px">
+
+  <div style="display:flex;flex-wrap:wrap;align-items:center;gap:14px">
+    <div style="display:flex;align-items:center;gap:11px">
+      <div style="width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,#FF2E88,#7C3CFF 60%,#22E0FF);display:flex;align-items:center;justify-content:center;font:800 18px Unbounded,sans-serif;box-shadow:0 0 26px rgba(255,46,136,.5)">Q</div>
+      <div>
+        <div style="font:800 17px/1 Unbounded,sans-serif;letter-spacing:-.02em">NEON QUIZ</div>
+        <div style="font:600 10px/1.4 Manrope,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.42);margin-top:3px">{{ t.kicker }}</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-wrap:wrap;gap:6px;padding:5px;border-radius:14px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);margin-left:8px">
+      <sc-for list="{{ tabs }}" as="tab" hint-placeholder-count="5">
+        <button onClick="{{ tab.go }}" style="border:0;cursor:pointer;font:700 12px Manrope,sans-serif;padding:9px 14px;border-radius:10px;background:{{ tab.bg }};color:{{ tab.fg }};box-shadow:{{ tab.shadow }};transition:all .18s" style-hover="filter:brightness(1.25)">{{ tab.label }}</button>
+      </sc-for>
+    </div>
+
+    <div style="flex:1"></div>
+
+    <sc-if value="{{ showVariants }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font:600 10px Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.38)">{{ t.layout }}</span>
+        <div style="display:flex;gap:4px;padding:4px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)">
+          <sc-for list="{{ variants }}" as="v" hint-placeholder-count="3">
+            <button onClick="{{ v.go }}" style="border:0;cursor:pointer;font:800 12px Unbounded,sans-serif;width:34px;height:30px;border-radius:9px;background:{{ v.bg }};color:{{ v.fg }}">{{ v.id }}</button>
+          </sc-for>
+        </div>
+      </div>
+    </sc-if>
+
+    <div style="display:flex;gap:4px;padding:4px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)">
+      <button onClick="{{ setRu }}" style="border:0;cursor:pointer;font:700 12px Manrope,sans-serif;padding:7px 12px;border-radius:9px;background:{{ ruBg }};color:{{ ruFg }}">RU</button>
+      <button onClick="{{ setEn }}" style="border:0;cursor:pointer;font:700 12px Manrope,sans-serif;padding:7px 12px;border-radius:9px;background:{{ enBg }};color:{{ enFg }}">EN</button>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:18px;align-items:stretch">
+
+    <div style="flex:1 1 620px;min-width:0;display:flex;flex-direction:column;gap:14px">
+
+      <sc-if value="{{ isEditor }}" hint-placeholder-val="{{ true }}">
+        <div style="border-radius:24px;border:1px solid rgba(255,255,255,.09);background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02));padding:26px 26px 30px;display:flex;flex-direction:column;gap:20px">
+          <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-end">
+            <div style="flex:1 1 300px;min-width:0">
+              <div style="font:800 26px/1.1 Unbounded,sans-serif;letter-spacing:-.02em">{{ t.editorTitle }}</div>
+              <div style="font:400 13px/1.6 Manrope,sans-serif;color:rgba(255,255,255,.5);margin-top:8px;max-width:52ch;text-wrap:pretty">{{ t.editorSub }}</div>
+            </div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button onClick="{{ onShuffle }}" style="cursor:pointer;border:1px solid rgba(34,224,255,.4);background:rgba(34,224,255,.1);color:#22E0FF;font:700 13px Manrope,sans-serif;padding:13px 18px;border-radius:13px" style-hover="background:rgba(34,224,255,.2)">⇄ {{ t.shuffle }}</button>
+              <button onClick="{{ onOpenLobby }}" style="cursor:pointer;border:0;background:linear-gradient(135deg,#FF2E88,#7C3CFF);color:#fff;font:800 13px Manrope,sans-serif;padding:13px 22px;border-radius:13px;box-shadow:0 10px 30px rgba(255,46,136,.35)" style-hover="filter:brightness(1.1)">{{ t.hostGame }} →</button>
+            </div>
+          </div>
+
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px 16px;border-radius:16px;background:rgba(124,60,255,.12);border:1px dashed rgba(124,60,255,.4)">
+            <span style="font:600 10px Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.55)">{{ t.runOrder }}</span>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              <sc-for list="{{ orderChips }}" as="c" hint-placeholder-count="5">
+                <span style="font:800 12px Unbounded,sans-serif;width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;color:#C8FF2E">{{ c.n }}</span>
+              </sc-for>
+            </div>
+            <span style="font:400 12px Manrope,sans-serif;color:rgba(255,255,255,.42)">{{ t.runOrderNote }}</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px">
+            <sc-for list="{{ bank }}" as="q" hint-placeholder-count="5">
+              <div style="border-radius:18px;border:1px solid rgba(255,255,255,.09);background:rgba(10,7,18,.6);padding:16px;display:flex;flex-direction:column;gap:12px">
+                <div style="display:flex;align-items:center;gap:10px">
+                  <span style="font:800 11px Unbounded,sans-serif;padding:5px 9px;border-radius:8px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.6)">{{ q.num }}</span>
+                  <span style="font:600 10px Manrope,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.3)">{{ q.meta }}</span>
+                </div>
+                <sc-if value="{{ q.hasImage }}" hint-placeholder-val="{{ false }}">
+                  <div role="img" style="width:100%;height:96px;border-radius:11px;background-image:{{ q.imageCss }};background-size:cover;background-position:center"></div>
+                </sc-if>
+                <div style="font:600 15px/1.4 Manrope,sans-serif;text-wrap:pretty;min-height:42px">{{ q.text }}</div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+                  <sc-for list="{{ q.opts }}" as="o" hint-placeholder-count="4">
+                    <div style="display:flex;align-items:center;gap:7px;padding:8px 9px;border-radius:10px;background:{{ o.bg }};border:1px solid {{ o.border }}">
+                      <span style="width:11px;height:11px;flex:none;background:{{ o.color }};clip-path:{{ o.clip }}"></span>
+                      <span style="font:600 11.5px/1.25 Manrope,sans-serif;color:{{ o.fg }}">{{ o.text }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-for>
+            <sc-if value="{{ draftOpen }}" hint-placeholder-val="{{ true }}">
+              <div style="border-radius:18px;border:1px solid rgba(124,60,255,.5);background:linear-gradient(180deg,rgba(124,60,255,.14),rgba(10,7,18,.7));padding:16px;display:flex;flex-direction:column;gap:11px">
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+                  <span style="font:800 12px Unbounded,sans-serif;letter-spacing:-.01em">{{ draftTitle }}</span>
+                  <span style="font:600 9.5px Manrope,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4)">{{ draftHint }}</span>
+                </div>
+                <div style="display:flex;gap:4px;padding:4px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);align-self:flex-start">
+                  <button onClick="{{ onDraftSingle }}" style="border:0;cursor:pointer;font:700 11px Manrope,sans-serif;padding:7px 13px;border-radius:8px;background:{{ draftSingleBg }};color:{{ draftSingleFg }}">◉ {{ draftSingleLabel }}</button>
+                  <button onClick="{{ onDraftMulti }}" style="border:0;cursor:pointer;font:700 11px Manrope,sans-serif;padding:7px 13px;border-radius:8px;background:{{ draftMultiBg }};color:{{ draftMultiFg }}">☑ {{ draftMultiLabel }}</button>
+                </div>
+                <input value="{{ draftText }}" onChange="{{ onDraftText }}" placeholder="{{ draftPlaceholder }}" style="border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.05);color:#fff;font:600 14px Manrope,sans-serif;padding:12px 13px;border-radius:11px;outline:none;width:100%;box-sizing:border-box">
+                <sc-if value="{{ draftHasImage }}" hint-placeholder-val="{{ true }}">
+                  <div style="position:relative;border-radius:12px;overflow:hidden;border:1px solid rgba(255,255,255,.12)">
+                    <div role="img" style="width:100%;height:120px;background-image:{{ draftImageCss }};background-size:cover;background-position:center"></div>
+                    <button onClick="{{ onDraftImageClear }}" style="position:absolute;top:8px;right:8px;cursor:pointer;border:0;background:rgba(7,5,13,.8);color:#fff;font:700 10px Manrope,sans-serif;padding:6px 10px;border-radius:8px">{{ draftImageRemove }}</button>
+                  </div>
+                </sc-if>
+                <label style="cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:11px;border:1px dashed rgba(255,255,255,.2);color:rgba(255,255,255,.5);font:700 11.5px Manrope,sans-serif" style-hover="border-color:#22E0FF;color:#22E0FF">
+                  {{ draftImageLabel }}
+                  <input type="file" accept="image/*" onChange="{{ onDraftImage }}" style="display:none">
+                </label>
+                <div style="display:flex;flex-direction:column;gap:7px">
+                  <sc-for list="{{ draftOpts }}" as="o" hint-placeholder-count="4">
+                    <div style="display:flex;align-items:center;gap:8px">
+                      <span style="width:14px;height:14px;flex:none;background:{{ o.color }};clip-path:{{ o.clip }}"></span>
+                      <input value="{{ o.value }}" onChange="{{ o.onChange }}" placeholder="{{ o.placeholder }}" style="flex:1;min-width:0;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#fff;font:600 12.5px Manrope,sans-serif;padding:9px 11px;border-radius:9px;outline:none">
+                      <button onClick="{{ o.pickCorrect }}" style="cursor:pointer;flex:none;width:30px;height:30px;border-radius:9px;background:{{ o.markBg }};border:1px solid {{ o.markBorder }};color:{{ o.markFg }};font:800 12px Manrope,sans-serif" style-hover="border-color:#C8FF2E">{{ o.mark }}</button>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex;gap:8px;margin-top:2px">
+                  <button onClick="{{ onDraftSave }}" style="cursor:pointer;flex:1;border:0;background:{{ draftSaveBg }};color:{{ draftSaveFg }};font:800 13px Manrope,sans-serif;padding:12px;border-radius:11px">{{ draftSave }}</button>
+                  <button onClick="{{ onDraftCancel }}" style="cursor:pointer;border:1px solid rgba(255,255,255,.16);background:transparent;color:rgba(255,255,255,.6);font:700 13px Manrope,sans-serif;padding:12px 16px;border-radius:11px">{{ draftCancel }}</button>
+                </div>
+              </div>
+            </sc-if>
+            <button onClick="{{ onAddQuestion }}" style="cursor:pointer;min-height:150px;border-radius:18px;border:1px dashed rgba(255,255,255,.2);background:rgba(255,255,255,.02);color:rgba(255,255,255,.45);font:700 13px Manrope,sans-serif;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px" style-hover="border-color:#FF2E88;color:#FF2E88">
+              <span style="font:400 28px Manrope,sans-serif;line-height:1">+</span>{{ t.addQuestion }}
+            </button>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isLobby }}" hint-placeholder-val="{{ true }}">
+        <div style="border-radius:24px;border:1px solid rgba(255,255,255,.09);background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02));padding:26px;display:flex;flex-direction:column;gap:22px;min-height:560px">
+          <div style="display:flex;flex-wrap:wrap;gap:22px;align-items:stretch">
+            <div style="flex:0 0 auto;display:flex;flex-direction:column;align-items:center;gap:12px;padding:18px;border-radius:20px;background:#fff;box-shadow:0 0 60px rgba(34,224,255,.35)">
+              <canvas id="nq-qr" width="188" height="188" style="width:188px;height:188px;display:block;border-radius:8px"></canvas>
+              <div style="font:800 11px Unbounded,sans-serif;color:#07050d;letter-spacing:.06em">{{ joinUrl }}</div>
+            </div>
+            <div style="flex:1 1 260px;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:14px">
+              <div style="font:600 10px Manrope,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#22E0FF">{{ t.scanToJoin }}</div>
+              <div style="font:800 40px/1 Unbounded,sans-serif;letter-spacing:-.03em;text-wrap:balance">{{ t.lobbyTitle }}</div>
+              <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin-top:4px">
+                <div style="padding:14px 20px;border-radius:16px;background:rgba(200,255,46,.12);border:1px solid rgba(200,255,46,.35)">
+                  <div style="font:600 9px Manrope,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.5)">{{ t.gamePin }}</div>
+                  <div style="font:800 30px/1.1 Unbounded,sans-serif;color:#C8FF2E;letter-spacing:.1em;margin-top:4px">{{ pin }}</div>
+                </div>
+                <div style="padding:14px 20px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)">
+                  <div style="font:600 9px Manrope,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.5)">{{ t.joined }}</div>
+                  <div style="font:800 30px/1.1 Unbounded,sans-serif;margin-top:4px">{{ playerCount }}</div>
+                </div>
+              </div>
+              <button onClick="{{ onStart }}" style="cursor:pointer;margin-top:6px;align-self:flex-start;border:0;background:linear-gradient(135deg,#FF2E88,#7C3CFF);color:#fff;font:800 15px Manrope,sans-serif;padding:17px 34px;border-radius:16px;box-shadow:0 14px 40px rgba(255,46,136,.4);animation:nqGlow 3s ease-in-out infinite" style-hover="filter:brightness(1.12)">{{ t.startNow }}</button>
+              <div style="font:400 12px Manrope,sans-serif;color:rgba(255,255,255,.4)">{{ t.startNote }}</div>
+            </div>
+          </div>
+
+          <div style="height:1px;background:rgba(255,255,255,.08)"></div>
+
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px">
+              <span style="width:7px;height:7px;border-radius:50%;background:#C8FF2E;box-shadow:0 0 12px #C8FF2E;animation:nqPulse 1.6s infinite"></span>
+              <span style="font:600 11px Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.55)">{{ t.openLobby }}</span>
+              <span style="flex:1"></span>
+              <div style="display:flex;gap:4px;padding:4px;border-radius:11px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)">
+                <button onClick="{{ modeSpot.go }}" style="border:0;cursor:pointer;font:700 11px Manrope,sans-serif;padding:7px 13px;border-radius:8px;background:{{ modeSpot.bg }};color:{{ modeSpot.fg }}">◉ {{ spotLabel }}</button>
+                <button onClick="{{ modeList.go }}" style="border:0;cursor:pointer;font:700 11px Manrope,sans-serif;padding:7px 13px;border-radius:8px;background:{{ modeList.bg }};color:{{ modeList.fg }}">☰ {{ listLabel }}</button>
+              </div>
+            </div>
+
+            <sc-if value="{{ spotOn }}" hint-placeholder-val="{{ true }}">
+              <div id="nq-stage" onMouseMove="{{ onSpotMove }}" onMouseLeave="{{ onSpotLeave }}" style="position:relative;height:320px;border-radius:20px;overflow:hidden;background:#05040a;border:1px solid rgba(255,255,255,.08);cursor:crosshair">
+                <div style="position:absolute;left:{{ spotX }};top:{{ spotY }};width:400px;height:400px;margin:-200px 0 0 -200px;border-radius:50%;background:radial-gradient(circle,rgba(255,46,136,.32),rgba(124,60,255,.16) 42%,transparent 70%);pointer-events:none;filter:blur(3px)"></div>
+                <sc-for list="{{ spotPlayers }}" as="p" hint-placeholder-count="8">
+                  <div style="position:absolute;left:{{ p.left }};top:{{ p.top }};transform:translate(-50%,-50%);display:flex;align-items:center;gap:8px;padding:8px 14px 8px 8px;border-radius:99px;background:{{ p.bg }};border:1px solid {{ p.border }};opacity:{{ p.opacity }};filter:blur({{ p.blur }});transition:opacity .14s linear,filter .14s linear;pointer-events:none;white-space:nowrap">
+                    <span style="width:24px;height:24px;border-radius:50%;background:{{ p.color }};display:flex;align-items:center;justify-content:center;font:800 10px Unbounded,sans-serif;color:#07050d">{{ p.initial }}</span>
+                    <span style="font:700 13px Manrope,sans-serif;color:{{ p.nameColor }}">{{ p.name }}</span>
+                  </div>
+                </sc-for>
+                <div style="position:absolute;left:16px;bottom:14px;display:flex;align-items:center;gap:10px;pointer-events:none">
+                  <span style="font:800 13px Unbounded,sans-serif;color:#C8FF2E">{{ playerCount }}</span>
+                  <span style="font:600 11px Manrope,sans-serif;color:rgba(255,255,255,.42)">{{ spotHint }}</span>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ listOn }}" hint-placeholder-val="{{ true }}">
+            <div style="display:flex;flex-wrap:wrap;gap:9px">
+              <sc-for list="{{ players }}" as="p" hint-placeholder-count="8">
+                <div style="display:flex;align-items:center;gap:9px;padding:9px 14px 9px 9px;border-radius:99px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);animation:nqRise .35s ease both">
+                  <span style="width:26px;height:26px;border-radius:50%;background:{{ p.color }};display:flex;align-items:center;justify-content:center;font:800 11px Unbounded,sans-serif;color:#07050d">{{ p.initial }}</span>
+                  <span style="font:700 13px Manrope,sans-serif">{{ p.name }}</span>
+                </div>
+              </sc-for>
+            </div>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isQuestionA }}" hint-placeholder-val="{{ true }}">
+        <div style="border-radius:24px;border:1px solid rgba(255,255,255,.09);background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02));padding:24px;display:flex;flex-direction:column;gap:18px;min-height:560px">
+          <div style="display:flex;flex-wrap:wrap;align-items:center;gap:12px">
+            <span style="font:800 12px Unbounded,sans-serif;padding:8px 13px;border-radius:10px;background:rgba(255,255,255,.08);color:rgba(255,255,255,.65)">{{ qCounter }}</span>
+            <div style="flex:1;min-width:120px;height:10px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden">
+              <div style="height:100%;width:{{ timePct }};background:linear-gradient(90deg,#C8FF2E,#22E0FF);border-radius:99px;transition:width .1s linear"></div>
+            </div>
+            <span style="font:700 13px Manrope,sans-serif;color:rgba(255,255,255,.6)">{{ answeredLabel }}</span>
+          </div>
+          <div style="display:flex;flex-wrap:wrap;gap:22px;align-items:center;flex:1">
+            <div style="flex:0 0 auto;position:relative;width:132px;height:132px;border-radius:50%;background:conic-gradient(#22E0FF {{ timePct }},rgba(255,255,255,.07) 0);display:flex;align-items:center;justify-content:center">
+              <div style="width:106px;height:106px;border-radius:50%;background:#0b0814;display:flex;flex-direction:column;align-items:center;justify-content:center">
+                <div style="font:800 40px/1 Unbounded,sans-serif;color:#22E0FF">{{ secsLeft }}</div>
+                <div style="font:600 9px Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-top:4px">{{ t.sec }}</div>
+              </div>
+            </div>
+            <div style="flex:1 1 320px;min-width:0;display:flex;flex-direction:column;gap:12px">
+              <sc-if value="{{ isMulti }}" hint-placeholder-val="{{ false }}">
+                <span style="align-self:flex-start;font:700 10px Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:#7C3CFF;padding:6px 11px;border-radius:8px;background:rgba(124,60,255,.16);border:1px solid rgba(124,60,255,.4)">{{ multiBadge }}</span>
+              </sc-if>
+              <div style="font:800 34px/1.2 Unbounded,sans-serif;letter-spacing:-.02em;text-wrap:pretty">{{ qText }}</div>
+            </div>
+            <sc-if value="{{ hasImage }}" hint-placeholder-val="{{ false }}">
+              <div role="img" style="flex:0 0 auto;width:230px;height:150px;border-radius:16px;border:1px solid rgba(255,255,255,.12);background-image:{{ qImageCss }};background-size:cover;background-position:center"></div>
+            </sc-if>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <sc-for list="{{ qOptions }}" as="o" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:14px;padding:20px 22px;border-radius:18px;background:{{ o.tileBg }};border:1px solid {{ o.tileBorder }};box-shadow:{{ o.tileShadow }}">
+                <span style="width:24px;height:24px;flex:none;background:{{ o.color }};clip-path:{{ o.clip }}"></span>
+                <span style="font:800 19px/1.25 Manrope,sans-serif;text-wrap:pretty">{{ o.text }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isQuestionB }}" hint-placeholder-val="{{ true }}">
+        <div style="border-radius:24px;border:1px solid rgba(255,255,255,.09);background:linear-gradient(135deg,rgba(255,46,136,.14),rgba(124,60,255,.1) 50%,rgba(34,224,255,.12));padding:0;overflow:hidden;display:flex;flex-wrap:wrap;min-height:560px">
+          <div style="flex:1 1 300px;min-width:0;padding:30px;display:flex;flex-direction:column;gap:18px;background:rgba(7,5,13,.55)">
+            <span style="align-self:flex-start;font:800 12px Unbounded,sans-serif;padding:8px 13px;border-radius:10px;background:rgba(255,255,255,.1)">{{ qCounter }}</span>
+            <div style="font:800 40px/1.12 Unbounded,sans-serif;letter-spacing:-.03em;text-wrap:pretty;flex:1">{{ qText }}</div>
+            <div style="display:flex;align-items:flex-end;gap:16px">
+              <div style="font:800 74px/1 Unbounded,sans-serif;color:#C8FF2E;text-shadow:0 0 40px rgba(200,255,46,.5)">{{ secsLeft }}</div>
+              <div style="flex:1;padding-bottom:12px">
+                <div style="font:600 10px Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.45);margin-bottom:8px">{{ answeredLabel }}</div>
+                <div style="height:8px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden"><div style="height:100%;width:{{ answeredPct }};background:#FF2E88;border-radius:99px;transition:width .3s"></div></div>
+              </div>
+            </div>
+          </div>
+          <div style="flex:1 1 280px;min-width:0;padding:22px;display:flex;flex-direction:column;gap:12px;justify-content:center">
+            <sc-for list="{{ qOptions }}" as="o" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:14px;padding:20px;border-radius:16px;background:{{ o.solidBg }};border:1px solid {{ o.tileBorder }}">
+                <span style="width:22px;height:22px;flex:none;background:{{ o.color }};clip-path:{{ o.clip }}"></span>
+                <span style="font:800 18px/1.25 Manrope,sans-serif">{{ o.text }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isQuestionC }}" hint-placeholder-val="{{ true }}">
+        <div style="border-radius:24px;border:1px solid rgba(255,255,255,.09);background:radial-gradient(600px 400px at 50% 0%,rgba(124,60,255,.35),transparent 70%),#0a0714;padding:0;overflow:hidden;display:flex;flex-direction:column;min-height:560px">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:24px;padding:40px 32px;text-align:center">
+            <div style="display:flex;align-items:center;gap:12px">
+              <span style="font:600 10px Manrope,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.5)">{{ qCounter }}</span>
+              <span style="width:5px;height:5px;border-radius:50%;background:#FF2E88"></span>
+              <span style="font:600 10px Manrope,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#FF2E88">{{ answeredLabel }}</span>
+            </div>
+            <div style="font:800 46px/1.1 Unbounded,sans-serif;letter-spacing:-.035em;max-width:22ch;text-wrap:balance">{{ qText }}</div>
+            <div style="position:relative;width:96px;height:96px;border-radius:50%;background:conic-gradient(#FF2E88 {{ timePct }},rgba(255,255,255,.08) 0);display:flex;align-items:center;justify-content:center">
+              <div style="width:78px;height:78px;border-radius:50%;background:#0a0714;display:flex;align-items:center;justify-content:center;font:800 30px Unbounded,sans-serif">{{ secsLeft }}</div>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:rgba(255,255,255,.08)">
+            <sc-for list="{{ qOptions }}" as="o" hint-placeholder-count="4">
+              <div style="padding:26px 18px;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center;background:{{ o.solidBg }}">
+                <span style="width:26px;height:26px;background:{{ o.color }};clip-path:{{ o.clip }}"></span>
+                <span style="font:800 16px/1.3 Manrope,sans-serif;text-wrap:pretty">{{ o.text }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isStats }}" hint-placeholder-val="{{ true }}">
+        <div style="border-radius:24px;border:1px solid rgba(255,255,255,.09);background:linear-gradient(180deg,rgba(255,255,255,.055),rgba(255,255,255,.02));padding:26px;display:flex;flex-direction:column;gap:20px;min-height:560px">
+          <div style="display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start">
+            <div style="flex:1 1 300px;min-width:0">
+              <div style="font:600 10px Manrope,sans-serif;letter-spacing:.18em;text-transform:uppercase;color:#C8FF2E">{{ t.correctAnswer }}</div>
+              <div style="font:800 28px/1.2 Unbounded,sans-serif;letter-spacing:-.02em;margin-top:8px;text-wrap:pretty">{{ correctText }}</div>
+              <div style="font:400 13px Manrope,sans-serif;color:rgba(255,255,255,.5);margin-top:10px">{{ statsSummary }}</div>
+            </div>
+            <button onClick="{{ onNext }}" style="cursor:pointer;border:0;background:linear-gradient(135deg,#22E0FF,#7C3CFF);color:#fff;font:800 14px Manrope,sans-serif;padding:15px 26px;border-radius:14px;box-shadow:0 12px 34px rgba(34,224,255,.3)" style-hover="filter:brightness(1.1)">{{ nextLabel }} →</button>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:14px;align-items:end;height:270px;margin-top:6px">
+            <sc-for list="{{ qOptions }}" as="o" hint-placeholder-count="4">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:12px">
+                <div style="font:800 20px Unbounded,sans-serif;color:{{ o.color }}">{{ o.count }}</div>
+                <div style="width:100%;height:{{ o.barH }};min-height:8px;border-radius:14px 14px 4px 4px;background:{{ o.color }};opacity:{{ o.barOpacity }};box-shadow:{{ o.tileShadow }};transition:height .5s cubic-bezier(.2,.9,.2,1)"></div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:8px;min-height:76px">
+                  <span style="width:20px;height:20px;background:{{ o.color }};clip-path:{{ o.clip }}"></span>
+                  <span style="font:600 12.5px/1.3 Manrope,sans-serif;text-align:center;color:{{ o.fg }};text-wrap:pretty">{{ o.text }}</span>
+                  <span style="font:800 9px Manrope,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:{{ o.verdictColor }}">{{ o.verdict }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:9px;padding-top:6px;margin-top:auto;border-top:1px solid rgba(255,255,255,.08)">
+            <div style="font:600 10px Manrope,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.4);padding-top:12px">{{ t.fastest }}</div>
+            <sc-for list="{{ fastest }}" as="f" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:12px">
+                <span style="font:800 11px Unbounded,sans-serif;width:22px;color:rgba(255,255,255,.4)">{{ f.rank }}</span>
+                <span style="width:24px;height:24px;border-radius:50%;background:{{ f.color }};display:flex;align-items:center;justify-content:center;font:800 10px Unbounded,sans-serif;color:#07050d">{{ f.initial }}</span>
+                <span style="font:700 13px Manrope,sans-serif;flex:1">{{ f.name }}</span>
+                <span style="font:600 12px Manrope,sans-serif;color:#22E0FF">{{ f.time }}</span>
+                <span style="font:800 13px Unbounded,sans-serif;color:#C8FF2E">+{{ f.points }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ isPodium }}" hint-placeholder-val="{{ true }}">
+        <div style="border-radius:24px;border:1px solid rgba(255,255,255,.09);background:radial-gradient(700px 400px at 50% 0%,rgba(255,46,136,.28),transparent 70%),linear-gradient(180deg,rgba(255,255,255,.04),rgba(255,255,255,.015));padding:30px 26px;display:flex;flex-direction:column;gap:26px;min-height:560px">
+          <div style="text-align:center">
+            <div style="font:600 10px Manrope,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#FF2E88">{{ t.gameOver }}</div>
+            <div style="font:800 38px/1.1 Unbounded,sans-serif;letter-spacing:-.03em;margin-top:10px">{{ t.podiumTitle }}</div>
+          </div>
+          <div style="display:flex;align-items:flex-end;justify-content:center;gap:14px">
+            <sc-for list="{{ podium }}" as="p" hint-placeholder-count="3">
+              <div style="flex:0 1 180px;display:flex;flex-direction:column;align-items:center;gap:12px">
+                <span style="width:52px;height:52px;border-radius:50%;background:{{ p.color }};display:flex;align-items:center;justify-content:center;font:800 20px Unbounded,sans-serif;color:#07050d;box-shadow:0 0 30px {{ p.glow }}">{{ p.initial }}</span>
+                <span style="font:800 15px Manrope,sans-serif">{{ p.name }}</span>
+                <span style="font:800 20px Unbounded,sans-serif;color:{{ p.accent }}">{{ p.score }}</span>
+                <div style="width:100%;height:{{ p.height }};border-radius:16px 16px 0 0;background:linear-gradient(180deg,{{ p.accent }},rgba(255,255,255,.04));display:flex;align-items:flex-start;justify-content:center;padding-top:14px;font:800 26px Unbounded,sans-serif;color:#07050d">{{ p.rank }}</div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:7px;max-width:560px;width:100%;margin:0 auto">
+            <sc-for list="{{ rest }}" as="r" hint-placeholder-count="6">
+              <div style="display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:12px;background:{{ r.bg }};border:1px solid rgba(255,255,255,.07)">
+                <span style="font:800 12px Unbounded,sans-serif;width:24px;color:rgba(255,255,255,.4)">{{ r.rank }}</span>
+                <span style="width:24px;height:24px;border-radius:50%;background:{{ r.color }};display:flex;align-items:center;justify-content:center;font:800 10px Unbounded,sans-serif;color:#07050d">{{ r.initial }}</span>
+                <span style="font:700 13px Manrope,sans-serif;flex:1">{{ r.name }}</span>
+                <span style="font:800 13px Unbounded,sans-serif;color:rgba(255,255,255,.75)">{{ r.score }}</span>
+              </div>
+            </sc-for>
+          </div>
+          <button onClick="{{ onRestart }}" style="cursor:pointer;align-self:center;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);color:#fff;font:700 13px Manrope,sans-serif;padding:14px 26px;border-radius:14px" style-hover="border-color:#FF2E88;color:#FF2E88">↺ {{ t.playAgain }}</button>
+        </div>
+      </sc-if>
+    </div>
+
+    <div style="flex:0 1 360px;min-width:280px;display:flex;flex-direction:column;gap:16px">
+
+      <div style="display:flex;flex-direction:column;gap:10px;align-items:center">
+        <div style="font:600 10px Manrope,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.35);align-self:flex-start">{{ t.playerView }}</div>
+        <div style="width:296px;max-width:100%;border-radius:42px;padding:11px;background:linear-gradient(160deg,#2a2140,#0d0a16);box-shadow:0 30px 70px rgba(0,0,0,.6),0 0 0 1px rgba(255,255,255,.09)">
+          <div style="border-radius:32px;overflow:hidden;background:#08060f;height:560px;display:flex;flex-direction:column;position:relative">
+            <div style="height:34px;display:flex;align-items:center;justify-content:space-between;padding:0 18px;font:600 10px Manrope,sans-serif;color:rgba(255,255,255,.6);flex:none">
+              <span>9:41</span>
+              <span style="width:52px;height:16px;border-radius:99px;background:#000;position:absolute;left:50%;transform:translateX(-50%);top:9px"></span>
+              <span>{{ t.live }}</span>
+            </div>
+
+            <sc-if value="{{ phoneJoin }}" hint-placeholder-val="{{ true }}">
+              <div style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:16px;padding:26px 22px;background:radial-gradient(300px 260px at 50% 20%,rgba(255,46,136,.28),transparent 70%)">
+                <div style="font:800 11px Unbounded,sans-serif;letter-spacing:.14em;color:#22E0FF">PIN {{ pin }}</div>
+                <div style="font:800 26px/1.15 Unbounded,sans-serif;letter-spacing:-.02em">{{ t.enterName }}</div>
+                <input value="{{ nameDraft }}" onChange="{{ onNameChange }}" placeholder="—" style="border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.06);color:#fff;font:700 17px Manrope,sans-serif;padding:16px 18px;border-radius:14px;outline:none;width:100%;box-sizing:border-box">
+                <button onClick="{{ onJoin }}" style="cursor:pointer;border:0;background:linear-gradient(135deg,#C8FF2E,#22E0FF);color:#07050d;font:800 15px Manrope,sans-serif;padding:16px;border-radius:14px;width:100%">{{ t.joinBtn }}</button>
+                <div style="font:400 11.5px/1.5 Manrope,sans-serif;color:rgba(255,255,255,.4);text-wrap:pretty">{{ t.joinNote }}</div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ phoneWait }}" hint-placeholder-val="{{ true }}">
+              <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:26px 22px;text-align:center">
+                <div style="width:58px;height:58px;border-radius:50%;border:3px solid rgba(255,255,255,.1);border-top-color:#FF2E88;animation:nqSpin 1s linear infinite"></div>
+                <div style="font:800 21px/1.2 Unbounded,sans-serif">{{ phoneWaitTitle }}</div>
+                <div style="font:400 12.5px/1.6 Manrope,sans-serif;color:rgba(255,255,255,.45)">{{ phoneWaitSub }}</div>
+                <div style="padding:9px 16px;border-radius:99px;background:rgba(200,255,46,.14);border:1px solid rgba(200,255,46,.3);font:700 12px Manrope,sans-serif;color:#C8FF2E">{{ playerCount }} {{ t.online }}</div>
+                <div id="nq-phone-stage" onMouseMove="{{ onPhoneMove }}" onMouseLeave="{{ onPhoneLeave }}" onTouchMove="{{ onPhoneMove }}" style="width:100%;position:relative;height:186px;border-radius:16px;overflow:hidden;background:#05040a;border:1px solid rgba(255,255,255,.07);cursor:crosshair;margin-top:2px">
+                  <div style="position:absolute;left:{{ phoneSpotX }};top:{{ phoneSpotY }};width:190px;height:190px;margin:-95px 0 0 -95px;border-radius:50%;background:radial-gradient(circle,rgba(255,46,136,.34),rgba(124,60,255,.16) 42%,transparent 70%);pointer-events:none;filter:blur(2px)"></div>
+                  <sc-for list="{{ phoneSpotPlayers }}" as="p" hint-placeholder-count="8">
+                    <div style="position:absolute;left:{{ p.left }};top:{{ p.top }};transform:translate(-50%,-50%);display:flex;align-items:center;gap:6px;padding:4px 10px 4px 4px;border-radius:99px;background:{{ p.bg }};border:1px solid {{ p.border }};opacity:{{ p.opacity }};filter:blur({{ p.blur }});transition:opacity .14s linear,filter .14s linear;pointer-events:none;white-space:nowrap">
+                      <span style="width:19px;height:19px;border-radius:50%;background:{{ p.color }};display:flex;align-items:center;justify-content:center;font:800 9px Unbounded,sans-serif;color:#07050d">{{ p.initial }}</span>
+                      <span style="font:700 11.5px Manrope,sans-serif;color:{{ p.nameColor }}">{{ p.name }}</span>
+                    </div>
+                  </sc-for>
+                  <sc-if value="{{ phoneOverflow }}" hint-placeholder-val="{{ true }}">
+                    <div style="position:absolute;right:10px;top:9px;padding:4px 9px;border-radius:99px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);font:800 9.5px Unbounded,sans-serif;color:rgba(255,255,255,.7);pointer-events:none">{{ phoneOverflowLabel }}</div>
+                  </sc-if>
+                  <div style="position:absolute;left:10px;bottom:9px;right:10px;display:flex;align-items:center;gap:7px;pointer-events:none;text-align:left">
+                    <span style="width:5px;height:5px;border-radius:50%;background:#FF2E88;box-shadow:0 0 8px #FF2E88;animation:nqPulse 1.4s infinite;flex:none"></span>
+                    <span style="font:600 9px/1.2 Manrope,sans-serif;color:rgba(255,255,255,.5);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ lastEvent }}</span>
+                  </div>
+                </div>
+                <div style="font:600 9.5px Manrope,sans-serif;color:rgba(255,255,255,.35)">{{ phoneSpotHint }}</div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ phonePodium }}" hint-placeholder-val="{{ true }}">
+              <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:12px;padding:18px 16px 16px;background:radial-gradient(280px 220px at 50% 0%,rgba(255,46,136,.3),transparent 70%)">
+                <div style="text-align:center">
+                  <div style="font:600 8.5px Manrope,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#FF2E88">{{ phonePodiumTitle }}</div>
+                  <div style="font:800 24px/1.1 Unbounded,sans-serif;letter-spacing:-.02em;margin-top:6px">{{ t.podiumTitle }}</div>
+                </div>
+                <div style="display:flex;align-items:flex-end;justify-content:center;gap:8px">
+                  <sc-for list="{{ phonePodiumTop }}" as="p" hint-placeholder-count="3">
+                    <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;min-width:0">
+                      <span style="width:30px;height:30px;border-radius:50%;background:{{ p.color }};display:flex;align-items:center;justify-content:center;font:800 12px Unbounded,sans-serif;color:#07050d">{{ p.initial }}</span>
+                      <span style="font:700 10.5px Manrope,sans-serif;overflow:hidden;text-overflow:ellipsis;max-width:100%">{{ p.name }}</span>
+                      <span style="font:800 12px Unbounded,sans-serif;color:{{ p.accent }}">{{ p.score }}</span>
+                      <div style="width:100%;height:{{ p.h }};border-radius:10px 10px 0 0;background:linear-gradient(180deg,{{ p.accent }},rgba(255,255,255,.04));display:flex;align-items:flex-start;justify-content:center;padding-top:7px;font:800 16px Unbounded,sans-serif;color:#07050d">{{ p.rank }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                  <sc-for list="{{ phoneBoard }}" as="r" hint-placeholder-count="5">
+                    <div style="display:flex;align-items:center;gap:8px;padding:6px 9px;border-radius:9px;background:{{ r.bg }};border:1px solid {{ r.border }}">
+                      <span style="font:800 9.5px Unbounded,sans-serif;color:rgba(255,255,255,.45);width:16px">{{ r.rank }}</span>
+                      <span style="width:18px;height:18px;border-radius:50%;background:{{ r.color }};display:flex;align-items:center;justify-content:center;font:800 8.5px Unbounded,sans-serif;color:#07050d">{{ r.initial }}</span>
+                      <span style="font:700 11px Manrope,sans-serif;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span>
+                      <span style="font:800 11px Unbounded,sans-serif;color:rgba(255,255,255,.8)">{{ r.score }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+                <div style="margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1)">
+                  <span style="font:600 9px Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.45)">{{ phoneMyPlaceLabel }}</span>
+                  <span style="display:flex;align-items:baseline;gap:8px">
+                    <span style="font:800 18px Unbounded,sans-serif;color:#FF2E88">{{ myRank }}</span>
+                    <span style="font:800 13px Unbounded,sans-serif;color:#C8FF2E">{{ myScore }}</span>
+                  </span>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ phonePlay }}" hint-placeholder-val="{{ true }}">
+              <div style="flex:1;display:flex;flex-direction:column;padding:16px;gap:12px">
+                <div style="display:flex;align-items:center;justify-content:space-between">
+                  <span style="font:800 10px Unbounded,sans-serif;color:rgba(255,255,255,.5)">{{ qCounter }}</span>
+                  <span style="font:800 15px Unbounded,sans-serif;color:#C8FF2E">{{ secsLeft }}s</span>
+                </div>
+                <div style="height:6px;border-radius:99px;background:rgba(255,255,255,.1);overflow:hidden"><div style="height:100%;width:{{ timePct }};background:linear-gradient(90deg,#C8FF2E,#FF2E88);transition:width .1s linear"></div></div>
+                <sc-if value="{{ hasImage }}" hint-placeholder-val="{{ false }}">
+                  <div role="img" style="width:100%;height:80px;border-radius:10px;background-image:{{ qImageCss }};background-size:cover;background-position:center"></div>
+                </sc-if>
+                <div style="font:700 14px/1.35 Manrope,sans-serif;text-wrap:pretty;min-height:40px">{{ qText }}</div>
+                <sc-if value="{{ isMulti }}" hint-placeholder-val="{{ false }}">
+                  <span style="align-self:flex-start;font:700 8.5px Manrope,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#C68CFF;padding:4px 8px;border-radius:6px;background:rgba(124,60,255,.2)">{{ multiBadge }}</span>
+                </sc-if>
+                <div style="flex:1;display:grid;grid-template-rows:repeat(4,1fr);gap:9px">
+                  <sc-for list="{{ phoneOptions }}" as="o" hint-placeholder-count="4">
+                    <button onClick="{{ o.pick }}" style="cursor:pointer;border:1px solid {{ o.phoneBorder }};background:{{ o.phoneBg }};opacity:{{ o.phoneOpacity }};border-radius:14px;display:flex;align-items:center;gap:12px;padding:0 14px;text-align:left;transition:all .2s" style-hover="filter:brightness(1.15)">
+                      <span style="width:20px;height:20px;flex:none;background:{{ o.color }};clip-path:{{ o.clip }}"></span>
+                      <span style="font:800 13.5px/1.25 Manrope,sans-serif;color:#fff">{{ o.text }}</span>
+                    </button>
+                  </sc-for>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:7px">
+                  <sc-if value="{{ submitReady }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ onSubmit }}" style="cursor:pointer;border:0;background:linear-gradient(135deg,#C8FF2E,#22E0FF);color:#07050d;font:800 13px Manrope,sans-serif;padding:12px;border-radius:12px;width:100%">{{ submitLabel }}</button>
+                  </sc-if>
+                  <div style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+                    <span style="font:600 10.5px Manrope,sans-serif;color:rgba(255,255,255,.4)">{{ phoneHint }}</span>
+                    <span style="font:700 10.5px Manrope,sans-serif;color:#22E0FF">{{ answeredLabel }}</span>
+                  </div>
+                  <div style="display:flex;align-items:center;gap:7px;padding:7px 9px;border-radius:9px;background:rgba(255,255,255,.05)">
+                    <span style="width:6px;height:6px;border-radius:50%;background:#FF2E88;box-shadow:0 0 8px #FF2E88;animation:nqPulse 1.4s infinite;flex:none"></span>
+                    <span style="font:600 10px/1.2 Manrope,sans-serif;color:rgba(255,255,255,.6);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">{{ lastEvent }}</span>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ phoneResult }}" hint-placeholder-val="{{ true }}">
+              <div style="flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;align-items:center;gap:12px;padding:18px 18px 16px;text-align:center;background:{{ resultBg }}">
+                <div style="width:52px;height:52px;border-radius:50%;background:{{ resultAccent }};display:flex;align-items:center;justify-content:center;font:800 24px Unbounded,sans-serif;color:#07050d;flex:none">{{ resultIcon }}</div>
+                <div style="font:800 21px/1.1 Unbounded,sans-serif">{{ resultTitle }}</div>
+                <div style="width:100%;display:flex;flex-direction:column;gap:5px;text-align:left">
+                  <div style="font:600 8.5px Manrope,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.4);padding-left:2px">{{ distLabel }}</div>
+                  <div style="display:flex;align-items:flex-end;gap:6px;height:52px">
+                    <sc-for list="{{ miniStats }}" as="m" hint-placeholder-count="4">
+                      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
+                        <span style="font:800 9.5px Unbounded,sans-serif;color:{{ m.color }}">{{ m.count }}</span>
+                        <div style="width:100%;height:{{ m.h }};border-radius:5px 5px 2px 2px;background:{{ m.color }};opacity:{{ m.opacity }}"></div>
+                      </div>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="display:flex;gap:10px">
+                  <div style="padding:12px 16px;border-radius:13px;background:rgba(255,255,255,.06)">
+                    <div style="font:600 8.5px Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.45)">{{ t.points }}</div>
+                    <div style="font:800 18px Unbounded,sans-serif;color:#C8FF2E;margin-top:3px">{{ myScore }}</div>
+                  </div>
+                  <div style="padding:12px 16px;border-radius:13px;background:rgba(255,255,255,.06)">
+                    <div style="font:600 8.5px Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.45)">{{ t.place }}</div>
+                    <div style="font:800 18px Unbounded,sans-serif;margin-top:3px">{{ myRank }}</div>
+                  </div>
+                </div>
+
+                <div style="width:100%;display:flex;flex-direction:column;gap:5px;margin-top:2px;text-align:left">
+                  <div style="font:600 8.5px Manrope,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.4);padding-left:2px">{{ top5Label }}</div>
+                  <sc-for list="{{ top5 }}" as="r" hint-placeholder-count="5">
+                    <div style="display:flex;align-items:center;gap:8px;padding:6px 9px;border-radius:9px;background:{{ r.bg }};border:1px solid {{ r.border }}">
+                      <span style="font:800 9.5px Unbounded,sans-serif;color:rgba(255,255,255,.45);width:18px">{{ r.rank }}</span>
+                      <span style="width:18px;height:18px;border-radius:50%;background:{{ r.color }};display:flex;align-items:center;justify-content:center;font:800 8.5px Unbounded,sans-serif;color:#07050d">{{ r.initial }}</span>
+                      <span style="font:700 11.5px Manrope,sans-serif;flex:1;min-width:0">{{ r.name }}</span>
+                      <span style="font:800 11px Unbounded,sans-serif;color:rgba(255,255,255,.8)">{{ r.score }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <sc-if value="{{ hasRival }}" hint-placeholder-val="{{ true }}">
+                  <div style="width:100%;display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:11px;background:rgba(255,255,255,.05);border:1px dashed rgba(255,255,255,.16);text-align:left">
+                    <span style="width:22px;height:22px;border-radius:50%;background:{{ rivalColor }};display:flex;align-items:center;justify-content:center;font:800 9.5px Unbounded,sans-serif;color:#07050d;flex:none">{{ rivalInitial }}</span>
+                    <div style="flex:1;min-width:0">
+                      <div style="font:600 8px Manrope,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.42)">{{ rivalTitle }}</div>
+                      <div style="font:700 11.5px Manrope,sans-serif;margin-top:2px">{{ rivalName }} · {{ rivalRank }}</div>
+                    </div>
+                    <div style="text-align:right">
+                      <div style="font:800 14px Unbounded,sans-serif;color:{{ rivalDeltaColor }}">{{ rivalDelta }}</div>
+                      <div style="font:600 8px Manrope,sans-serif;color:rgba(255,255,255,.4)">{{ rivalNote }}</div>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
+          </div>
+        </div>
+      </div>
+
+      <div style="flex:1;min-height:200px;border-radius:20px;border:1px solid rgba(255,255,255,.09);background:rgba(10,7,18,.55);padding:16px;display:flex;flex-direction:column;gap:12px">
+        <div style="display:flex;align-items:center;gap:9px">
+          <span style="width:7px;height:7px;border-radius:50%;background:#FF2E88;box-shadow:0 0 10px #FF2E88;animation:nqPulse 1.4s infinite"></span>
+          <span style="font:600 10px Manrope,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.5)">{{ t.liveFeed }}</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:2px;overflow:hidden">
+          <sc-for list="{{ feed }}" as="e" hint-placeholder-count="6">
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.05);animation:nqRise .3s ease both">
+              <span style="width:20px;height:20px;flex:none;border-radius:6px;background:{{ e.chipBg }};color:{{ e.color }};display:flex;align-items:center;justify-content:center;font:800 10px Manrope,sans-serif">{{ e.icon }}</span>
+              <span style="font:600 12px/1.3 Manrope,sans-serif;flex:1;min-width:0">{{ e.text }}</span>
+              <span style="font:600 10.5px Manrope,sans-serif;color:rgba(255,255,255,.35)">{{ e.time }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;initialLang&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;ru&quot;,&quot;en&quot;],&quot;default&quot;:&quot;ru&quot;,&quot;tsType&quot;:&quot;'ru'|'en'&quot;,&quot;section&quot;:&quot;Игра&quot;},&quot;hostLayout&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;A&quot;,&quot;B&quot;,&quot;C&quot;],&quot;default&quot;:&quot;A&quot;,&quot;tsType&quot;:&quot;'A'|'B'|'C'&quot;,&quot;section&quot;:&quot;Игра&quot;},&quot;lobbyMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;spotlight&quot;,&quot;list&quot;],&quot;default&quot;:&quot;spotlight&quot;,&quot;tsType&quot;:&quot;'spotlight'|'list'&quot;,&quot;section&quot;:&quot;Лобби&quot;},&quot;answerSeconds&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:10,&quot;min&quot;:5,&quot;max&quot;:30,&quot;step&quot;:1,&quot;unit&quot;:&quot;s&quot;,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Игра&quot;},&quot;playerTarget&quot;:{&quot;editor&quot;:&quot;range&quot;,&quot;default&quot;:14,&quot;min&quot;:4,&quot;max&quot;:30,&quot;step&quot;:1,&quot;tsType&quot;:&quot;number&quot;,&quot;section&quot;:&quot;Игра&quot;}}">
+class Component extends DCLogic {
+  NAMES = ['Аня','Тимур','Марк','Лиза','Даня','Соня','Артём','Кира','Егор','Мия','Илья','Вера','Рома','Ника','Влад','Тася','Гоша','Ася','Юра','Дина','Лев','Ева','Стас','Рита','Олег','Зина','Пётр','Юля','Клим','Нора'];
+  COLORS = ['#FF2E88','#22E0FF','#C8FF2E','#FFB020','#7C3CFF','#FF6B3D','#3DFFB0','#F2C1FF'];
+  SLOTS = [
+    {c:'#FF2E88',clip:'polygon(50% 0,100% 100%,0 100%)'},
+    {c:'#22E0FF',clip:'polygon(50% 0,100% 50%,50% 100%,0 50%)'},
+    {c:'#C8FF2E',clip:'circle(50%)'},
+    {c:'#FFB020',clip:'inset(0 round 5px)'}
+  ];
+  QB = [
+    {ru:'Какой органоид клетки синтезирует АТФ?',en:'Which organelle produces ATP?',topic:{ru:'Клетка',en:'Cell'},correct:0,
+     opts:[{ru:'Митохондрия',en:'Mitochondrion'},{ru:'Рибосома',en:'Ribosome'},{ru:'Лизосома',en:'Lysosome'},{ru:'Ядро',en:'Nucleus'}]},
+    {ru:'Что является мономером белка?',en:'What is the monomer of a protein?',topic:{ru:'Биополимеры',en:'Biopolymers'},correct:1,
+     opts:[{ru:'Глюкоза',en:'Glucose'},{ru:'Аминокислота',en:'Amino acid'},{ru:'Нуклеотид',en:'Nucleotide'},{ru:'Глицерин',en:'Glycerol'}]},
+    {ru:'При каком делении образуются гаметы?',en:'Which division produces gametes?',topic:{ru:'Размножение',en:'Reproduction'},correct:2,
+     opts:[{ru:'Митоз',en:'Mitosis'},{ru:'Амитоз',en:'Amitosis'},{ru:'Мейоз',en:'Meiosis'},{ru:'Дробление',en:'Cleavage'}]},
+    {ru:'Где в клетке идёт фотосинтез?',en:'Where does photosynthesis happen?',topic:{ru:'Обмен веществ',en:'Metabolism'},correct:3,
+     opts:[{ru:'Вакуоль',en:'Vacuole'},{ru:'Аппарат Гольджи',en:'Golgi apparatus'},{ru:'Цитоплазма',en:'Cytoplasm'},{ru:'Хлоропласт',en:'Chloroplast'}]},
+    {ru:'Кто создал теорию естественного отбора?',en:'Who proposed natural selection?',topic:{ru:'Эволюция',en:'Evolution'},correct:1,
+     opts:[{ru:'Грегор Мендель',en:'Gregor Mendel'},{ru:'Чарльз Дарвин',en:'Charles Darwin'},{ru:'Луи Пастер',en:'Louis Pasteur'},{ru:'Карл Линней',en:'Carl Linnaeus'}]}
+  ];
+  T = {
+    ru:{kicker:'мини-викторина · прототип',layout:'Раскладка',tabEditor:'Редактор',tabLobby:'Лобби',tabQuestion:'Вопрос',tabStats:'Статистика',tabPodium:'Итоги',
+      editorTitle:'Тест: биология, 9 класс',editorSub:'Добавляйте вопросы и по четыре варианта ответа. При запуске система сама перемешает и вопросы, и варианты внутри каждого вопроса.',
+      shuffle:'Перемешать заново',hostGame:'Провести игру',runOrder:'Порядок запуска',runOrderNote:'варианты ответов тоже перемешаны',addQuestion:'Добавить вопрос',
+      scanToJoin:'Сканируйте, чтобы войти',lobbyTitle:'Откройте камеру и присоединяйтесь',gamePin:'PIN игры',joined:'Подключились',startNow:'Начать одновременно',
+      startNote:'Тест стартует у всех участников в один момент.',openLobby:'Открытое лобби — список видят все',
+      sec:'секунд',answered:'ответили',of:'из',correctAnswer:'Правильный ответ',fastest:'Быстрее всех',next:'Следующий вопрос',results:'К итогам',
+      gameOver:'Игра завершена',podiumTitle:'Подиум',playAgain:'Играть снова',playerView:'Экран участника',live:'LIVE',liveFeed:'Живая лента',
+      enterName:'Как вас зовут?',joinBtn:'Войти в игру',joinNote:'Ваше имя сразу появится в общем списке на большом экране.',
+      online:'в игре',waitTitle:'Ждём хоста',waitSub:'Вы в лобби. Тест начнётся у всех одновременно.',
+      lockedTitle:'Ответ принят',lockedSub:'Смотрите на большой экран.',points:'Очки',place:'Место',
+      pickHint:'Выберите вариант',correctTitle:'Верно!',wrongTitle:'Мимо',noAnswerTitle:'Не успели',
+      correctSub:'Чем быстрее ответ — тем больше очков.',wrongSub:'Правильный вариант подсвечен на экране хоста.',noAnswerSub:'10 секунд вышли — очки не начислены.',
+      joinedFeed:'вошёл в игру',leftFeed:'вышел',answeredFeed:'ответил за',shuffledFeed:'вопросы перемешаны',startedFeed:'старт у всех устройств',qFeed:'вопрос'},
+    en:{kicker:'mini quiz · prototype',layout:'Layout',tabEditor:'Editor',tabLobby:'Lobby',tabQuestion:'Question',tabStats:'Stats',tabPodium:'Results',
+      editorTitle:'Quiz: biology, grade 9',editorSub:'Add questions and four answer options each. On launch the app shuffles both the questions and the options inside every question.',
+      shuffle:'Shuffle again',hostGame:'Host the game',runOrder:'Run order',runOrderNote:'answer options are shuffled too',addQuestion:'Add question',
+      scanToJoin:'Scan to join',lobbyTitle:'Open your camera and jump in',gamePin:'Game PIN',joined:'Joined',startNow:'Start for everyone',
+      startNote:'The quiz starts on every device at the same moment.',openLobby:'Open lobby — everyone sees the list',
+      sec:'seconds',answered:'answered',of:'of',correctAnswer:'Correct answer',fastest:'Fastest players',next:'Next question',results:'See results',
+      gameOver:'Game over',podiumTitle:'Podium',playAgain:'Play again',playerView:'Player screen',live:'LIVE',liveFeed:'Live feed',
+      enterName:'What is your name?',joinBtn:'Join the game',joinNote:'Your name shows up on the big screen instantly.',
+      online:'in game',waitTitle:'Waiting for host',waitSub:'You are in the lobby. The quiz starts for everyone at once.',
+      lockedTitle:'Answer locked',lockedSub:'Look at the big screen.',points:'Points',place:'Place',
+      pickHint:'Pick an option',correctTitle:'Correct!',wrongTitle:'Not quite',noAnswerTitle:'Out of time',
+      correctSub:'The faster you answer, the more points you get.',wrongSub:'The right option is highlighted on the host screen.',noAnswerSub:'10 seconds are up — no points this round.',
+      joinedFeed:'joined the game',leftFeed:'left',answeredFeed:'answered in',shuffledFeed:'questions shuffled',startedFeed:'synced start on all devices',qFeed:'question'}
+  };
+
+  state = {
+    lang: this.props.initialLang === 'en' ? 'en' : 'ru',
+    variant: this.props.hostLayout || 'A',
+    screen: 'editor',
+    order: [0,1,2,3,4],
+    optOrder: {},
+    qIndex: 0,
+    timeLeft: 10,
+    players: [],
+    feed: [],
+    scores: {},
+    answers: {},
+    joined: false,
+    nameDraft: 'Ты',
+    myChoice: null,
+    myTime: null,
+    myScore: 0,
+    clock: 0,
+    lobbyMode: this.props.lobbyMode === 'list' ? 'list' : 'spotlight',
+    cursor: null,
+    draft: null
+  };
+
+  openDraft(){ this.setState({draft: {text: '', opts: ['','','',''], correct: [0], multi: false, image: ''}}); }
+  toggleDraftCorrect(i){
+    this.setState(st => {
+      const d = st.draft, cur = d.correct;
+      if (!d.multi) return {draft: Object.assign({}, d, {correct: [i]})};
+      const next = cur.includes(i) ? cur.filter(x => x !== i) : cur.concat([i]).sort((a,b)=>a-b);
+      return {draft: Object.assign({}, d, {correct: next.length ? next : cur})};
+    });
+  }
+  setDraftMulti(multi){
+    this.setState(st => ({draft: Object.assign({}, st.draft, {multi, correct: multi ? st.draft.correct : [st.draft.correct[0]]})}));
+  }
+  readDraftImage(e){
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => this.patchDraft({image: r.result});
+    r.readAsDataURL(f);
+  }
+  patchDraft(patch){ this.setState(st => ({draft: Object.assign({}, st.draft, patch)})); }
+  setDraftOpt(i, v){
+    this.setState(st => { const opts = st.draft.opts.slice(); opts[i] = v; return {draft: Object.assign({}, st.draft, {opts})}; });
+  }
+  saveDraft(){
+    const d = this.state.draft;
+    if (!d || !d.text.trim() || d.opts.some(o => !o.trim()) || !d.correct.length) return;
+    this.QB.push({
+      ru: d.text.trim(), en: d.text.trim(), topic: {ru:'Свой вопрос',en:'Custom'},
+      correct: d.multi ? d.correct.slice() : d.correct[0],
+      image: d.image || '',
+      opts: d.opts.map(o => ({ru: o.trim(), en: o.trim()}))
+    });
+    const idx = this.QB.length - 1;
+    this.setState(st => ({
+      draft: null,
+      order: st.order.concat([idx]),
+      optOrder: Object.assign({}, st.optOrder, {[idx]: this.shuffled([0,1,2,3])})
+    }));
+    this.push('+', d.text.trim().slice(0, 28) + (this.state.lang==='ru' ? ' · добавлен' : ' · added'), '#7C3CFF');
+  }
+
+  get secs(){ return Math.max(4, Math.min(30, this.props.answerSeconds ?? 10)); }
+  get target(){ return Math.max(3, Math.min(30, this.props.playerTarget ?? 14)); }
+  get t(){ return this.T[this.state.lang]; }
+
+  componentDidMount(){
+    this.frame = 0;
+    this.shuffleAll(true);
+    this.timer = setInterval(() => this.loop(), 100);
+    this.drawQR();
+  }
+  componentDidUpdate(){ this.drawQR(); }
+  componentWillUnmount(){ clearInterval(this.timer); }
+
+  drawQR(){
+    const el = document.getElementById('nq-qr');
+    if (!el) { this._qrEl = null; return; }
+    if (this._qrEl === el && el.dataset.painted === '1') return;
+    const lib = window.NQ_QR;
+    if (!lib) return;
+    this._qrEl = el;
+    lib.render(el, 'https://neonquiz.app/join/' + this.pin().replace(/ /g,''), {size:188, quiet:2});
+    el.dataset.painted = '1';
+  }
+
+  measureStage(){
+    const el = document.getElementById('nq-stage');
+    if (el) {
+      const r = el.getBoundingClientRect();
+      const cur = this.state.stage;
+      if (!cur || Math.abs(cur.w - r.width) > 1 || Math.abs(cur.h - r.height) > 1)
+        this.setState({stage: {w: r.width, h: r.height}});
+    }
+    const pel = document.getElementById('nq-phone-stage');
+    if (pel) {
+      const pr = pel.getBoundingClientRect();
+      const pc = this.state.pstage;
+      if (!pc || Math.abs(pc.w - pr.width) > 1 || Math.abs(pc.h - pr.height) > 1)
+        this.setState({pstage: {w: pr.width, h: pr.height}});
+    }
+  }
+
+  pin(){ return '48 21 07'; }
+
+  rnd(n){ return Math.floor(Math.random()*n); }
+  shuffled(arr){ const a = arr.slice(); for (let i=a.length-1;i>0;i--){ const j=this.rnd(i+1); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+
+  shuffleAll(silent){
+    const order = this.shuffled(this.QB.map((_,i)=>i));
+    const optOrder = {};
+    this.QB.forEach((q,i)=>{ optOrder[i] = this.shuffled([0,1,2,3]); });
+    this.setState({order, optOrder});
+    if (!silent) this.push('⇄', this.t.shuffledFeed, '#22E0FF');
+  }
+
+  push(icon, text, color){
+    const d = new Date();
+    const time = String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+    this.setState(s => ({feed: [{icon, text, color, time}].concat(s.feed).slice(0,9)}));
+  }
+
+  loop(){
+    this.frame++;
+    const s = this.state;
+    if (s.screen === 'lobby') {
+      this.drawQR();
+      this.measureStage();
+      if (!s.cursor || !s.pcursor) this.setState({clock: this.frame});
+    }
+    if (s.screen === 'lobby' && s.players.length < this.target && this.frame % 6 === 0) this.addPlayer();
+    if (s.screen === 'question') this.tick();
+  }
+
+  slotFor(i){
+    if (!this.slots || this.slots.length < 30) {
+      const cells = [];
+      for (let r = 0; r < 5; r++) for (let c = 0; c < 6; c++) cells.push([c, r]);
+      this.slots = this.shuffled(cells).map(([c, r]) => ({
+        x: 9 + (c / 5) * 82 + (Math.random() * 5 - 2.5),
+        y: 11 + (r / 4) * 70 + (Math.random() * 6 - 3)
+      }));
+    }
+    return this.slots[i % this.slots.length];
+  }
+
+  // Fixed 3x4 grid sized to the 254x188 phone stage: 30% column pitch (~76px > 70px chip),
+  // 21% row pitch (~39px > 29px chip), last row clears the ticker. Extras roll into a "+N" chip.
+  PHONE_SLOTS = 12;
+  phoneSlotFor(i){
+    if (!this.pslots) {
+      const cells = [];
+      for (let r = 0; r < 4; r++) for (let c = 0; c < 3; c++) cells.push([c, r]);
+      this.pslots = this.shuffled(cells).map(([c, r]) => ({
+        x: 20 + c * 30 + (Math.random() * 3 - 1.5),
+        y: 11 + r * 21 + (Math.random() * 3 - 1.5)
+      }));
+    }
+    return this.pslots[i];
+  }
+
+  addPlayer(){
+    const i = this.state.players.length;
+    const name = this.NAMES[i % this.NAMES.length];
+    const p = {name, color: this.COLORS[i % this.COLORS.length], pos: this.slotFor(i)};
+    this.setState(s => ({players: s.players.concat([p])}));
+    this.push('+', name + ' · ' + this.t.joinedFeed, '#C8FF2E');
+  }
+
+  correctIdx(q){ return Array.isArray(q.correct) ? q.correct : [q.correct]; }
+  correctSlots(qi){
+    const perm = this.state.optOrder[qi] || [0,1,2,3];
+    return this.correctIdx(this.QB[qi]).map(c => perm.indexOf(c)).sort((a,b)=>a-b);
+  }
+  sameSet(a, b){ return a.length === b.length && a.slice().sort().every((v,i) => v === b.slice().sort()[i]); }
+
+  startQuestion(idx){
+    const qi = this.state.order[idx];
+    const cs = this.correctSlots(qi);
+    this.schedule = this.state.players.map(p => ({
+      name: p.name,
+      at: 0.9 + Math.random() * (this.secs - 1.6),
+      slots: Math.random() < 0.66 ? cs.slice() : this.shuffled([0,1,2,3]).slice(0, cs.length),
+      done: false
+    }));
+    this.setState({screen:'question', qIndex: idx, timeLeft: this.secs, answers: {}, myChoice: null, myChoices: [], submitted: false, myTime: null});
+    this.push('▶', this.t.qFeed + ' ' + (idx+1) + ' · ' + this.t.startedFeed, '#FF2E88');
+  }
+
+  points(time, ok){ return ok ? Math.round(500 + 500 * (1 - time / this.secs)) : 0; }
+
+  tick(){
+    const s = this.state;
+    const left = Math.max(0, s.timeLeft - 0.1);
+    const elapsed = this.secs - left;
+    const qi = s.order[s.qIndex];
+    const cs = this.correctSlots(qi);
+    const answers = Object.assign({}, s.answers);
+    const scores = Object.assign({}, s.scores);
+    (this.schedule || []).forEach(p => {
+      if (!p.done && p.at <= elapsed) {
+        p.done = true;
+        const ok = this.sameSet(p.slots, cs);
+        const pts = this.points(p.at, ok);
+        answers[p.name] = {slots: p.slots, time: p.at, points: pts, ok};
+        scores[p.name] = (scores[p.name] || 0) + pts;
+        this.push('✓', p.name + ' · ' + this.t.answeredFeed + ' ' + p.at.toFixed(1) + 's', ok ? '#C8FF2E' : '#FF2E88');
+      }
+    });
+    if (left <= 0) {
+      if (s.joined && !(s.myChoices || []).length) this.push('!', this.state.nameDraft + ' · ' + this.t.noAnswerTitle, '#FFB020');
+      this.setState({timeLeft: 0, answers, scores, screen: 'stats'});
+    } else {
+      this.setState({timeLeft: left, answers, scores});
+    }
+  }
+
+  board(){
+    const s = this.state;
+    const rows = s.players.map(p => ({name: p.name, color: p.color, score: s.scores[p.name] || 0}));
+    if (s.joined) rows.push({name: s.nameDraft || 'You', color:'#FFFFFF', score: s.myScore, you:true});
+    rows.sort((a,b) => b.score - a.score);
+    return rows;
+  }
+
+  renderVals(){
+    const s = this.state, t = this.t;
+    const qi = s.order[s.qIndex];
+    const src = this.QB[qi] || this.QB[0];
+    const perm = s.optOrder[qi] || [0,1,2,3];
+    const csArr = this.correctIdx(src).map(c => perm.indexOf(c));
+    const cs = csArr[0];
+    const isMulti = csArr.length > 1;
+    const myPicks = s.myChoices || [];
+    const lang = s.lang;
+    const answersArr = Object.values(s.answers);
+    const counts = [0,0,0,0];
+    answersArr.forEach(a => (a.slots || [a.slot]).forEach(sl => counts[sl]++));
+    if (s.submitted) myPicks.forEach(sl => counts[sl]++);
+    const maxCount = Math.max(1, ...counts);
+    const revealed = s.screen === 'stats';
+
+    const qOptions = perm.map((oi, slot) => {
+      const sl = this.SLOTS[slot];
+      const isC = csArr.includes(slot);
+      const picked = myPicks.includes(slot);
+      const dim = revealed && !isC;
+      return {
+        text: src.opts[oi][lang], color: sl.c, clip: sl.clip,
+        tileBg: revealed ? (isC ? 'rgba(200,255,46,.16)' : 'rgba(255,255,255,.03)') : 'rgba(255,255,255,.05)',
+        tileBorder: revealed && isC ? 'rgba(200,255,46,.6)' : 'rgba(255,255,255,.1)',
+        tileShadow: revealed && isC ? '0 0 34px rgba(200,255,46,.35)' : 'none',
+        solidBg: dim ? 'rgba(255,255,255,.03)' : 'rgba(255,255,255,.06)',
+        fg: dim ? 'rgba(255,255,255,.45)' : '#fff',
+        count: counts[slot],
+        barH: Math.round(24 + 152 * (counts[slot] / maxCount)) + 'px',
+        barOpacity: dim ? 0.28 : 1,
+        verdict: revealed ? (isC ? '✓ ' + t.correctAnswer : '—') : '',
+        verdictColor: isC ? '#C8FF2E' : 'rgba(255,255,255,.3)',
+        phoneBg: (!myPicks.length || picked) ? sl.c : 'rgba(255,255,255,.05)',
+        phoneBorder: picked ? '#fff' : 'rgba(255,255,255,.12)',
+        phoneOpacity: (!myPicks.length || picked) ? 1 : 0.35,
+        pick: () => this.pickAnswer(slot, csArr, isMulti)
+      };
+    });
+
+    const answeredCount = answersArr.length + (s.submitted ? 1 : 0);
+    const total = s.players.length + (s.joined ? 1 : 0);
+    const board = this.board();
+    const myIdx = board.findIndex(r => r.you);
+
+    const fastest = answersArr.filter(a => a.ok).sort((a,b)=>a.time-b.time).slice(0,3).map((a,i) => {
+      const name = Object.keys(s.answers).find(k => s.answers[k] === a) || '';
+      const p = s.players.find(x => x.name === name) || {color:'#fff'};
+      return {rank:'#'+(i+1), name, color:p.color, initial:name.charAt(0), time:a.time.toFixed(1)+'s', points:a.points};
+    });
+
+    const cur = s.cursor;
+    const box = s.stage || {w: 760, h: 320};
+    const sw = cur ? cur.w : box.w, sh = cur ? cur.h : box.h;
+    const tt = s.clock / 22;
+    const spot = cur
+      ? {x: cur.x, y: cur.y, w: sw, h: sh}
+      : {x: sw * (0.5 + 0.33 * Math.cos(tt)), y: sh * (0.5 + 0.3 * Math.sin(tt * 1.35)), w: sw, h: sh};
+
+    const pcur = s.pcursor, pbox = s.pstage || {w: 250, h: 186};
+    const pw = pcur ? pcur.w : pbox.w, ph = pcur ? pcur.h : pbox.h;
+    const pspot = pcur
+      ? {x: pcur.x, y: pcur.y}
+      : {x: pw * (0.5 + 0.3 * Math.cos(tt * 1.1)), y: ph * (0.4 + 0.28 * Math.sin(tt * 1.5))};
+
+    let rival = null;
+    if (myIdx > 0) { const r = board[myIdx-1]; rival = {name:r.name, color:r.color, rank:myIdx, delta:r.score - s.myScore, ahead:true}; }
+    else if (myIdx === 0 && board.length > 1) { const r = board[1]; rival = {name:r.name, color:r.color, rank:2, delta:s.myScore - r.score, ahead:false}; }
+
+    const podiumH = ['150px','112px','86px'];
+    const podiumAccent = ['#C8FF2E','#22E0FF','#FF2E88'];
+    const tabDefs = [['editor',t.tabEditor],['lobby',t.tabLobby],['question',t.tabQuestion],['stats',t.tabStats],['podium',t.tabPodium]];
+
+    const resultOk = s.submitted && this.sameSet(myPicks, csArr);
+    const resultNone = !s.submitted;
+
+    return {
+      t,
+      tabs: tabDefs.map(([id,label]) => ({
+        label, bg: s.screen===id ? 'linear-gradient(135deg,#FF2E88,#7C3CFF)' : 'transparent',
+        fg: s.screen===id ? '#fff' : 'rgba(255,255,255,.55)',
+        shadow: s.screen===id ? '0 6px 20px rgba(255,46,136,.35)' : 'none',
+        go: () => this.goTab(id)
+      })),
+      variants: ['A','B','C'].map(id => ({id, bg: s.variant===id ? '#22E0FF' : 'transparent', fg: s.variant===id ? '#07050d' : 'rgba(255,255,255,.55)', go: () => this.setState({variant:id})})),
+      showVariants: s.screen === 'question',
+      setRu: () => this.setState({lang:'ru'}), setEn: () => this.setState({lang:'en'}),
+      ruBg: lang==='ru' ? '#fff' : 'transparent', ruFg: lang==='ru' ? '#07050d' : 'rgba(255,255,255,.55)',
+      enBg: lang==='en' ? '#fff' : 'transparent', enFg: lang==='en' ? '#07050d' : 'rgba(255,255,255,.55)',
+
+      isEditor: s.screen==='editor', isLobby: s.screen==='lobby', isStats: s.screen==='stats', isPodium: s.screen==='podium',
+      isQuestionA: s.screen==='question' && s.variant==='A',
+      isQuestionB: s.screen==='question' && s.variant==='B',
+      isQuestionC: s.screen==='question' && s.variant==='C',
+
+      bank: s.order.map((idx, n) => {
+        const q = this.QB[idx];
+        const p = s.optOrder[idx] || [0,1,2,3];
+        const corr = this.correctIdx(q);
+        return {
+          num: String(n+1).padStart(2,'0'),
+          meta: q.topic[lang] + ' · ' + this.secs + 's' + (corr.length > 1 ? (lang==='ru' ? ' · мультивыбор' : ' · multi') : ''),
+          text: q[lang], hasImage: !!q.image, imageCss: q.image ? 'url("' + q.image + '")' : 'none',
+          opts: p.map((oi, slot) => ({
+            text: q.opts[oi][lang], color: this.SLOTS[slot].c, clip: this.SLOTS[slot].clip,
+            bg: corr.includes(oi) ? 'rgba(200,255,46,.12)' : 'rgba(255,255,255,.04)',
+            border: corr.includes(oi) ? 'rgba(200,255,46,.35)' : 'rgba(255,255,255,.07)',
+            fg: corr.includes(oi) ? '#C8FF2E' : 'rgba(255,255,255,.7)'
+          }))
+        };
+      }),
+      orderChips: s.order.map(i => ({n: i+1})),
+      onShuffle: () => this.shuffleAll(false),
+      onAddQuestion: () => this.openDraft(),
+      draftOpen: !!s.draft,
+      draftText: s.draft ? s.draft.text : '',
+      onDraftText: (e) => this.patchDraft({text: e.target.value}),
+      draftTitle: lang==='ru' ? 'Новый вопрос' : 'New question',
+      draftHint: lang==='ru' ? 'Отметьте правильный вариант' : 'Mark the correct option',
+      draftPlaceholder: lang==='ru' ? 'Текст вопроса' : 'Question text',
+      draftSave: lang==='ru' ? 'Сохранить' : 'Save',
+      draftCancel: lang==='ru' ? 'Отмена' : 'Cancel',
+      draftSaveBg: (s.draft && s.draft.text.trim() && s.draft.opts.every(o => o.trim())) ? 'linear-gradient(135deg,#C8FF2E,#22E0FF)' : 'rgba(255,255,255,.08)',
+      draftSaveFg: (s.draft && s.draft.text.trim() && s.draft.opts.every(o => o.trim())) ? '#07050d' : 'rgba(255,255,255,.35)',
+      draftMulti: !!(s.draft && s.draft.multi),
+      draftSingleBg: s.draft && !s.draft.multi ? '#7C3CFF' : 'transparent',
+      draftSingleFg: s.draft && !s.draft.multi ? '#fff' : 'rgba(255,255,255,.5)',
+      draftMultiBg: s.draft && s.draft.multi ? '#7C3CFF' : 'transparent',
+      draftMultiFg: s.draft && s.draft.multi ? '#fff' : 'rgba(255,255,255,.5)',
+      draftSingleLabel: lang==='ru' ? 'Один ответ' : 'Single',
+      draftMultiLabel: lang==='ru' ? 'Несколько' : 'Multiple',
+      onDraftSingle: () => this.setDraftMulti(false),
+      onDraftMulti: () => this.setDraftMulti(true),
+      draftImageCss: s.draft && s.draft.image ? 'url("' + s.draft.image + '")' : 'none',
+      draftHasImage: !!(s.draft && s.draft.image),
+      draftImageLabel: lang==='ru' ? '🖼 Добавить фото к вопросу' : '🖼 Add a photo',
+      draftImageRemove: lang==='ru' ? 'Убрать фото' : 'Remove photo',
+      onDraftImage: (e) => this.readDraftImage(e),
+      onDraftImageClear: () => this.patchDraft({image: ''}),
+      onDraftSave: () => this.saveDraft(),
+      onDraftCancel: () => this.setState({draft: null}),
+      draftOpts: (s.draft ? s.draft.opts : ['','','','']).map((v, i) => ({
+        value: v,
+        placeholder: (lang==='ru' ? 'Вариант ' : 'Option ') + (i+1),
+        color: this.SLOTS[i].c, clip: this.SLOTS[i].clip,
+        isCorrect: !!(s.draft && s.draft.correct.includes(i)),
+        markBg: s.draft && s.draft.correct.includes(i) ? 'rgba(200,255,46,.16)' : 'rgba(255,255,255,.04)',
+        markBorder: s.draft && s.draft.correct.includes(i) ? 'rgba(200,255,46,.5)' : 'rgba(255,255,255,.09)',
+        markFg: s.draft && s.draft.correct.includes(i) ? '#C8FF2E' : 'rgba(255,255,255,.3)',
+        mark: s.draft && s.draft.correct.includes(i) ? '✓' : '○',
+        onChange: (e) => this.setDraftOpt(i, e.target.value),
+        pickCorrect: () => this.toggleDraftCorrect(i)
+      })),
+      onOpenLobby: () => this.goTab('lobby'),
+
+      pin: this.pin(), joinUrl: 'neonquiz.app/join',
+      playerCount: total,
+      players: s.players.map(p => ({name: p.name, color: p.color, initial: p.name.charAt(0)})),
+      spotOn: s.lobbyMode === 'spotlight', listOn: s.lobbyMode === 'list',
+      modeSpot: {bg: s.lobbyMode==='spotlight' ? '#FF2E88' : 'transparent', fg: s.lobbyMode==='spotlight' ? '#fff' : 'rgba(255,255,255,.5)', go: () => this.setState({lobbyMode:'spotlight'})},
+      modeList: {bg: s.lobbyMode==='list' ? '#FF2E88' : 'transparent', fg: s.lobbyMode==='list' ? '#fff' : 'rgba(255,255,255,.5)', go: () => this.setState({lobbyMode:'list', cursor:null})},
+      spotLabel: lang==='ru' ? 'Прожектор' : 'Spotlight',
+      listLabel: lang==='ru' ? 'Список' : 'List',
+      spotX: Math.round(spot.x) + 'px', spotY: Math.round(spot.y) + 'px',
+      spotPlayers: s.players.map(p => {
+        const px = (p.pos ? p.pos.x : 50) / 100 * spot.w, py = (p.pos ? p.pos.y : 50) / 100 * spot.h;
+        const d = Math.hypot(px - spot.x, py - spot.y);
+        const k = Math.max(0, Math.min(1, 1 - d / 190));
+        const lit = Math.pow(k, 0.6);
+        return {
+          name: p.name, initial: p.name.charAt(0), color: p.color,
+          left: (p.pos ? p.pos.x : 50) + '%', top: (p.pos ? p.pos.y : 50) + '%',
+          opacity: (0.07 + 0.93 * lit).toFixed(3),
+          blur: (7 * (1 - lit)).toFixed(1) + 'px',
+          bg: lit > 0.35 ? 'rgba(255,255,255,.1)' : 'rgba(255,255,255,.04)',
+          border: lit > 0.35 ? 'rgba(255,255,255,.28)' : 'rgba(255,255,255,.08)',
+          nameColor: lit > 0.35 ? '#fff' : 'rgba(255,255,255,.75)'
+        };
+      }),
+      spotHint: s.cursor
+        ? (lang==='ru' ? 'Ведите луч по экрану — имена загораются' : 'Move the beam — names light up')
+        : (lang==='ru' ? 'Наведите курсор: луч ищет спрятавшихся' : 'Hover in: the beam hunts for hidden players'),
+      onSpotMove: (e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        this.setState({cursor: {x: e.clientX - r.left, y: e.clientY - r.top, w: r.width, h: r.height}});
+      },
+      onSpotLeave: () => this.setState({cursor: null}),
+      onStart: () => this.startQuestion(0),
+
+      qCounter: (lang==='ru' ? 'Вопрос ' : 'Question ') + (s.qIndex+1) + ' / ' + s.order.length,
+      qText: src[lang],
+      qOptions,
+      secsLeft: Math.ceil(s.timeLeft),
+      timePct: Math.round((s.timeLeft / this.secs) * 100) + '%',
+      answeredPct: total ? Math.round((answeredCount/total)*100) + '%' : '0%',
+      answeredLabel: answeredCount + ' ' + t.of + ' ' + total + ' ' + t.answered,
+      correctText: this.correctIdx(src).map(c => src.opts[c][lang]).join(' · '),
+      hasImage: !!src.image, qImageCss: src.image ? 'url("' + src.image + '")' : 'none',
+      multiBadge: isMulti ? (lang==='ru' ? 'Несколько ответов' : 'Multiple answers') : '',
+      isMulti,
+      submitReady: !s.submitted && myPicks.length > 0,
+      submitLabel: lang==='ru' ? 'Ответить' : 'Submit',
+      onSubmit: () => this.commitAnswer(myPicks, csArr),
+      statsSummary: (lang==='ru' ? 'Ответили верно ' : 'Correct: ') + answersArr.filter(a=>a.ok).length + ' ' + t.of + ' ' + total,
+      fastest,
+      nextLabel: s.qIndex + 1 < s.order.length ? t.next : t.results,
+      onNext: () => { s.qIndex + 1 < s.order.length ? this.startQuestion(s.qIndex+1) : this.setState({screen:'podium'}); },
+      onRestart: () => { this.shuffleAll(true); this.setState({screen:'lobby', players:[], scores:{}, answers:{}, feed:[], myScore:0, joined:false, myChoice:null}); },
+
+      podium: board.slice(0,3).map((r,i) => ({rank:i+1, name:r.name, score:r.score, color:r.color, initial:r.name.charAt(0), accent:podiumAccent[i], glow:podiumAccent[i]+'66', height:podiumH[i]})),
+      rest: board.slice(3).map((r,i) => ({rank:i+4, name:r.name, score:r.score, color:r.color, initial:r.name.charAt(0), bg: r.you ? 'rgba(255,46,136,.14)' : 'rgba(255,255,255,.035)'})),
+
+      phoneJoin: !s.joined && (s.screen==='lobby' || s.screen==='editor'),
+      phoneWait: s.joined && (s.screen==='lobby' || s.screen==='editor'),
+      phonePodium: s.joined && s.screen==='podium',
+      phonePodiumTitle: lang==='ru' ? 'Игра завершена' : 'Game over',
+      phoneMyPlaceLabel: lang==='ru' ? 'Ваше место' : 'Your place',
+      phonePodiumTop: board.slice(0,3).map((r,i) => ({
+        rank: i+1, name: r.you ? (lang==='ru' ? 'Вы' : 'You') : r.name, score: r.score,
+        color: r.color, initial: (r.name||'?').charAt(0),
+        accent: podiumAccent[i], h: ['74px','54px','40px'][i]
+      })),
+      phoneBoard: board.slice(3,8).map((r,i) => ({
+        rank: i+4, name: r.you ? (lang==='ru' ? 'Вы' : 'You') : r.name, score: r.score,
+        color: r.color, initial: (r.name||'?').charAt(0),
+        bg: r.you ? 'rgba(255,46,136,.18)' : 'rgba(255,255,255,.05)',
+        border: r.you ? 'rgba(255,46,136,.45)' : 'rgba(255,255,255,.07)'
+      })),
+      phonePlay: s.joined && s.screen==='question',
+      phoneResult: s.joined && s.screen==='stats',
+      phoneWaitTitle: s.screen==='podium' ? t.podiumTitle : t.waitTitle,
+      phoneWaitSub: s.screen==='podium' ? (lang==='ru' ? 'Ваше место — ' : 'Your place — ') + (myIdx+1) : t.waitSub,
+      phoneOptions: qOptions,
+      phoneHint: s.submitted ? t.lockedTitle : (isMulti ? (lang==='ru' ? 'Выберите несколько' : 'Pick several') : t.pickHint),
+      nameDraft: s.nameDraft,
+      onNameChange: (e) => this.setState({nameDraft: e.target.value}),
+      onJoin: () => { this.setState({joined:true}); this.push('+', (s.nameDraft||'You') + ' · ' + t.joinedFeed, '#fff'); if (s.screen==='editor') this.goTab('lobby'); },
+      resultIcon: resultNone ? '⏱' : (resultOk ? '✓' : '✕'),
+      resultTitle: resultNone ? t.noAnswerTitle : (resultOk ? t.correctTitle : t.wrongTitle),
+      resultSub: resultNone ? t.noAnswerSub : (resultOk ? t.correctSub : t.wrongSub),
+      resultAccent: resultNone ? '#FFB020' : (resultOk ? '#C8FF2E' : '#FF2E88'),
+      resultBg: resultOk ? 'radial-gradient(300px 240px at 50% 30%,rgba(200,255,46,.22),transparent 70%)' : 'radial-gradient(300px 240px at 50% 30%,rgba(255,46,136,.2),transparent 70%)',
+      myScore: s.myScore, myRank: myIdx >= 0 ? '#'+(myIdx+1) : '—',
+      top5Label: lang==='ru' ? 'Топ-5' : 'Top 5',
+      top5: board.slice(0,5).map((r,i) => ({
+        rank: '#'+(i+1), name: r.you ? (lang==='ru' ? 'Вы' : 'You') : r.name, score: r.score,
+        color: r.color, initial: (r.name || '?').charAt(0),
+        bg: r.you ? 'rgba(255,46,136,.18)' : 'rgba(255,255,255,.05)',
+        border: r.you ? 'rgba(255,46,136,.5)' : 'rgba(255,255,255,.07)'
+      })),
+      hasRival: !!rival,
+      rivalTitle: rival ? (rival.ahead
+        ? (lang==='ru' ? 'Ближайший впереди' : 'Closest ahead')
+        : (lang==='ru' ? 'Дышит в спину' : 'Right behind you')) : '',
+      rivalName: rival ? rival.name : '',
+      rivalInitial: rival ? rival.name.charAt(0) : '',
+      rivalColor: rival ? rival.color : '#fff',
+      rivalRank: rival ? '#'+rival.rank : '',
+      rivalDelta: rival ? (rival.ahead ? '+' : '−') + rival.delta : '',
+      rivalDeltaColor: rival && rival.ahead ? '#FFB020' : '#C8FF2E',
+      rivalNote: rival ? (lang==='ru' ? 'очков разницы' : 'points apart') : '',
+      lastEvent: s.feed.length ? s.feed[0].text : (lang==='ru' ? 'ждём ответы участников' : 'waiting for answers'),
+      phoneFeed: s.feed.slice(0,4).map(e => ({icon:e.icon, text:e.text, color:e.color})),
+      phoneSpotX: Math.round(pspot.x) + 'px', phoneSpotY: Math.round(pspot.y) + 'px',
+      phoneSpotHint: lang==='ru' ? 'Ведите пальцем — луч ищет тех, кто уже зашёл' : 'Drag your finger — the beam finds who joined',
+      phoneOverflow: s.players.length > this.PHONE_SLOTS,
+      phoneOverflowLabel: '+' + Math.max(0, s.players.length - this.PHONE_SLOTS) + (lang==='ru' ? ' ещё' : ' more'),
+      phoneSpotPlayers: s.players.slice(0, this.PHONE_SLOTS).map((p, i) => {
+        const pp = this.phoneSlotFor(i);
+        const px = pp.x / 100 * pw, py = pp.y / 100 * ph;
+        const k = Math.max(0, Math.min(1, 1 - Math.hypot(px - pspot.x, py - pspot.y) / 92));
+        const lit = Math.pow(k, 0.6);
+        return {
+          name: p.name, initial: p.name.charAt(0), color: p.color,
+          left: pp.x + '%', top: pp.y + '%',
+          opacity: (0.06 + 0.94 * lit).toFixed(3),
+          blur: (5 * (1 - lit)).toFixed(1) + 'px',
+          bg: lit > 0.35 ? 'rgba(255,255,255,.1)' : 'rgba(255,255,255,.04)',
+          border: lit > 0.35 ? 'rgba(255,255,255,.26)' : 'rgba(255,255,255,.07)',
+          nameColor: lit > 0.35 ? '#fff' : 'rgba(255,255,255,.7)'
+        };
+      }),
+      onPhoneMove: (e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        const pt = e.touches && e.touches[0] ? e.touches[0] : e;
+        this.setState({pcursor: {x: pt.clientX - r.left, y: pt.clientY - r.top, w: r.width, h: r.height}});
+      },
+      onPhoneLeave: () => this.setState({pcursor: null}),
+      miniStats: qOptions.map(o => ({
+        color: o.color, clip: o.clip, count: o.count,
+        h: Math.round(6 + 34 * (o.count / maxCount)) + 'px',
+        opacity: o.count === counts[cs] && cs === qOptions.indexOf(o) ? 1 : 0.85
+      })),
+      distLabel: lang==='ru' ? 'Как ответили все' : 'How everyone answered',
+      feed: s.feed.map(e => ({icon:e.icon, text:e.text, time:e.time, color:e.color, chipBg: 'rgba(255,255,255,.08)'}))
+    };
+  }
+
+  goTab(id){
+    if (id === 'question') { this.ensurePlayers(); this.startQuestion(this.state.qIndex); return; }
+    if (id === 'stats') { this.ensurePlayers(); this.synthAnswers(); return; }
+    if (id === 'lobby' && this.state.players.length === 0) this.setState({players: []});
+    if (id === 'podium') this.ensurePlayers();
+    this.setState({screen:id});
+  }
+
+  ensurePlayers(){
+    let players = this.state.players;
+    if (!players.length) {
+      players = [];
+      for (let i=0;i<this.target;i++)
+        players.push({name: this.NAMES[i % this.NAMES.length], color: this.COLORS[i % this.COLORS.length], pos: this.slotFor(i)});
+    }
+    const scores = Object.assign({}, this.state.scores);
+    let seeded = false;
+    players.forEach(p => { if (!scores[p.name]) { scores[p.name] = 400 + this.rnd(2200); seeded = true; } });
+    if (players !== this.state.players || seeded) this.setState({players, scores});
+  }
+
+  synthAnswers(){
+    const st = this.state;
+    const players = st.players.length ? st.players : [];
+    const qi = st.order[st.qIndex];
+    const cs = this.correctSlots(qi);
+    const answers = {};
+    players.forEach(p => {
+      if (Math.random() < 0.12) return;
+      const at = 0.9 + Math.random() * (this.secs - 1.6);
+      const slots = Math.random() < 0.66 ? cs.slice() : this.shuffled([0,1,2,3]).slice(0, cs.length);
+      const ok = this.sameSet(slots, cs);
+      answers[p.name] = {slots, time: at, points: this.points(at, ok), ok};
+    });
+    this.schedule = [];
+    this.setState({screen: 'stats', answers, timeLeft: 0});
+  }
+
+  pickAnswer(slot, cs, multi){
+    const st = this.state;
+    if (st.submitted) return;
+    if (multi) {
+      const cur = st.myChoices || [];
+      const next = cur.includes(slot) ? cur.filter(x => x !== slot) : cur.concat([slot]);
+      this.setState({myChoices: next});
+      return;
+    }
+    this.commitAnswer([slot], cs);
+  }
+
+  commitAnswer(slots, cs){
+    if (this.state.submitted || !slots.length) return;
+    const time = this.secs - this.state.timeLeft;
+    const ok = this.sameSet(slots, cs);
+    const pts = this.points(time, ok);
+    this.setState(st => ({myChoices: slots, myChoice: slots[0], submitted: true, myTime: time, myScore: st.myScore + pts}));
+    this.push(ok ? '✓' : '✕', (this.state.nameDraft||'You') + ' · ' + this.t.answeredFeed + ' ' + time.toFixed(1) + 's', ok ? '#C8FF2E' : '#FF2E88');
+  }
+}
+
+</script>
+</body>
+</html>

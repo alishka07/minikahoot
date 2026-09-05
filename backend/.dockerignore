@@ -1,0 +1,8 @@
+__pycache__
+*.pyc
+db.sqlite3
+test-db.sqlite3
+smoke.sqlite3
+.git
+.env
+.env.local

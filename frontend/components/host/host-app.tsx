@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Progress } from '@/components/ui/progress';
 import { QuestionEditor } from './question-editor';
 import { HostScreen, Participant, Question } from './types';
+import { GameAtmosphere } from '@/components/player/game-atmosphere';
 
 const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api';
 const WS = process.env.NEXT_PUBLIC_WS_URL ?? 'ws://localhost:8000/ws/quiz';
@@ -85,13 +86,16 @@ export function HostApp({ onExit }: { onExit: () => void }) {
   const leaders = useMemo(() => [...participants].sort((a, b) => b.score - a.score), [participants]);
   const canLaunch = quizTitle.trim() !== '' && questions.length > 0 && questions.every(question => question.text.trim() && question.options.every(option => option.text.trim()));
 
-  return <main className="game-shell min-h-screen p-4 sm:p-7">
-    <HostHeader screen={screen} connected={connected} hasStats={completedRounds > 0 && answered > 0} hasPodium={gameFinished && participants.length > 0} onExit={onExit} onGo={setScreen} />
-    {screen === 'editor' && <section className="host-page"><div className="host-heading"><div className="w-full max-w-2xl"><p className="eyebrow">Конструктор игры</p><Input value={quizTitle} onChange={event => setQuizTitle(event.target.value)} className="quiz-title-input" placeholder="Название викторины" /></div><div className="flex flex-wrap gap-3"><Button onClick={shuffle} disabled={questions.length < 2} variant="outline" className="secondary-host-button"><Shuffle /> Перемешать</Button><Button onClick={openLobby} disabled={!canLaunch} className="primary-host-button">Открыть лобби <ChevronRight /></Button></div></div>{questions.length > 0 && <div className="run-order"><span>Порядок запуска</span>{questions.map((_, i) => <b key={i}>{i + 1}</b>)}</div>}<QuestionEditor questions={questions} onChange={setQuestions} /></section>}
-    {screen === 'lobby' && <Lobby roomCode={roomCode} joinUrl={joinUrl} participants={participants} onStart={start} onRegenerate={openLobby} />}
-    {screen === 'question' && current && <QuestionView question={current} index={questionIndex} total={questions.length} timeLeft={timeLeft} answered={answered} totalPlayers={participants.length} />}
-    {screen === 'stats' && current && <StatsView question={current} participants={participants} answered={answered} counts={answerCounts} hasResults={completedRounds > 0 && answered > 0} isLast={questionIndex === questions.length - 1} onNext={next} />}
-    {screen === 'podium' && <Podium participants={leaders} available={gameFinished && participants.length > 0} onRestart={() => { setQuestionIndex(0); void openLobby(); }} />}
+  return <main className="game-shell relative min-h-screen overflow-hidden p-4 sm:p-7">
+    <GameAtmosphere />
+    <div className="relative z-10">
+      <HostHeader screen={screen} connected={connected} hasStats={completedRounds > 0 && answered > 0} hasPodium={gameFinished && participants.length > 0} onExit={onExit} onGo={setScreen} />
+      {screen === 'editor' && <section className="host-page"><div className="host-heading"><div className="w-full max-w-2xl"><p className="eyebrow">Конструктор игры</p><Input value={quizTitle} onChange={event => setQuizTitle(event.target.value)} className="quiz-title-input" placeholder="Название викторины" /></div><div className="flex flex-wrap gap-3"><Button onClick={shuffle} disabled={questions.length < 2} variant="outline" className="secondary-host-button"><Shuffle /> Перемешать</Button><Button onClick={openLobby} disabled={!canLaunch} className="primary-host-button">Открыть лобби <ChevronRight /></Button></div></div>{questions.length > 0 && <div className="run-order"><span>Порядок запуска</span>{questions.map((_, i) => <b key={i}>{i + 1}</b>)}</div>}<QuestionEditor questions={questions} onChange={setQuestions} /></section>}
+      {screen === 'lobby' && <Lobby roomCode={roomCode} joinUrl={joinUrl} participants={participants} onStart={start} onRegenerate={openLobby} />}
+      {screen === 'question' && current && <QuestionView question={current} index={questionIndex} total={questions.length} timeLeft={timeLeft} answered={answered} totalPlayers={participants.length} />}
+      {screen === 'stats' && current && <StatsView question={current} participants={participants} answered={answered} counts={answerCounts} hasResults={completedRounds > 0 && answered > 0} isLast={questionIndex === questions.length - 1} onNext={next} />}
+      {screen === 'podium' && <Podium participants={leaders} available={gameFinished && participants.length > 0} onRestart={() => { setQuestionIndex(0); void openLobby(); }} />}
+    </div>
   </main>;
 }
 

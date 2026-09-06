@@ -54,10 +54,39 @@ export function HostApp({ onExit }: { onExit: () => void }) {
   const hostToken = useRef('');
   const syncedIds = useRef(new Set<number>());
   const liveQuestionsRef = useRef<Question[]>([]);
+  const keepAlive = useRef(0);
+  const retryTimer = useRef(0);
+  const wantRoom = useRef('');
   const current = questions[questionIndex] ?? questions[0];
   const joinUrl = typeof window === 'undefined' ? `http://localhost:3000/?room=${roomCode}` : `${window.location.origin}/?room=${roomCode}`;
 
-  useEffect(() => () => socket.current?.close(), []);
+  useEffect(() => () => { wantRoom.current = ''; window.clearInterval(keepAlive.current); window.clearTimeout(retryTimer.current); socket.current?.close(); }, []);
+
+  // Молчащий сокет прокси закрывает примерно через 27 секунд, а в лобби трафика нет:
+  // держим соединение ping'ом и переподключаемся при обрыве - на входе сервер сам
+  // присылает state_sync со списком игроков, так что состояние восстанавливается.
+  const connect = (code: string) => new Promise<void>((resolve, reject) => {
+    window.clearInterval(keepAlive.current);
+    window.clearTimeout(retryTimer.current);
+    const ws = new WebSocket(`${WS}/${code}/?role=host&token=${hostToken.current}`); socket.current = ws;
+    const timer = window.setTimeout(() => { ws.close(); reject(new Error('Сервер не ответил вовремя')); }, 20000);
+    ws.onopen = () => {
+      window.clearTimeout(timer); setConnected(true); setLobbyError('');
+      keepAlive.current = window.setInterval(() => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping', t: Date.now() })); }, 10000);
+      resolve();
+    };
+    ws.onclose = () => {
+      window.clearTimeout(timer); window.clearInterval(keepAlive.current); setConnected(false);
+      reject(new Error('Соединение с сервером закрыто'));
+      if (wantRoom.current === code) retryTimer.current = window.setTimeout(() => { void connect(code).catch(() => {}); }, 2000);
+    };
+    ws.onmessage = ({ data }) => {
+      const event = JSON.parse(data);
+      if (event.participants) setParticipants(event.participants);
+      if (event.type === 'game_started') { const index = liveQuestionsRef.current.findIndex(q => q.id === event.question.id); if (index >= 0) setQuestionIndex(index); setTimeLeft(10); setAnswered(0); setAnswerCounts({}); setScreen('question'); }
+      if (event.type === 'stats_update') { setAnswered(event.answered_count ?? 0); setAnswerCounts(event.answer_counts ?? {}); }
+    };
+  });
   useEffect(() => {
     if (screen !== 'question') return;
     const timer = window.setInterval(() => setTimeLeft(value => {
@@ -82,6 +111,7 @@ export function HostApp({ onExit }: { onExit: () => void }) {
       if (!reuse) {
         // Комнату заводим на сервере до показа лобби: раньше здесь был локальный случайный
         // код, и QR успевал увести игрока в комнату, которой на сервере нет.
+        wantRoom.current = '';
         socket.current?.close();
         setParticipants([]);
         syncedIds.current.clear();
@@ -96,18 +126,7 @@ export function HostApp({ onExit }: { onExit: () => void }) {
       setQuestions(liveQuestions);
       // Лобби открываем только после реально установленного сокета: иначе «Начать игру»
       // уходила в пустоту, а игроки оставались ждать.
-      if (!reuse) await new Promise<void>((resolve, reject) => {
-        const ws = new WebSocket(`${WS}/${code}/?role=host&token=${hostToken.current}`); socket.current = ws;
-        const timer = window.setTimeout(() => { ws.close(); reject(new Error('Сервер не ответил вовремя')); }, 20000);
-        ws.onopen = () => { window.clearTimeout(timer); setConnected(true); resolve(); };
-        ws.onclose = () => { window.clearTimeout(timer); setConnected(false); reject(new Error('Соединение с сервером закрыто')); };
-        ws.onmessage = ({ data }) => {
-          const event = JSON.parse(data);
-          if (event.participants) setParticipants(event.participants);
-          if (event.type === 'game_started') { const index = liveQuestionsRef.current.findIndex(q => q.id === event.question.id); if (index >= 0) setQuestionIndex(index); setTimeLeft(10); setAnswered(0); setAnswerCounts({}); setScreen('question'); }
-          if (event.type === 'stats_update') { setAnswered(event.answered_count ?? 0); setAnswerCounts(event.answer_counts ?? {}); }
-        };
-      });
+      if (!reuse) { wantRoom.current = code; await connect(code); }
       setRoomCode(code);
       setScreen('lobby');
     } catch (error) {
@@ -140,7 +159,7 @@ function HostHeader({ screen, connected, hasStats, hasPodium, onExit, onGo }: { 
 }
 
 function Lobby({ roomCode, joinUrl, participants, error, onStart, onRegenerate }: { roomCode: string; joinUrl: string; participants: Participant[]; error: string; onStart: () => void; onRegenerate: () => void }) {
-  return <section className="host-page"><div className="grid gap-6 lg:grid-cols-[360px_1fr]"><div className="qr-card"><div className="flex items-center justify-between gap-3"><p className="eyebrow">Комната готова</p><button onClick={onRegenerate} className="refresh-code" title="Создать новую комнату"><RefreshCw size={15}/> Новый код</button></div><h1 className="mt-2 text-3xl font-black">Сканируйте и входите</h1><div className="qr-wrap"><QRCodeSVG key={roomCode} value={joinUrl} size={210} fgColor="#17171f" /></div><p className="text-center text-sm text-white/50">Код комнаты</p><div className="room-code">{roomCode.slice(0,3)} {roomCode.slice(3)}</div></div><div className="panel flex min-h-[570px] flex-col"><div className="flex items-start justify-between"><div><p className="eyebrow">Открытое лобби</p><h2 className="mt-2 text-4xl font-black">Уже в игре: {participants.length}</h2><p className="mt-2 text-white/50">Игроки появятся здесь сразу после подключения.</p></div><Users className="text-violet-300" size={36} /></div><div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">{participants.map((p, i) => <div className="player-chip" key={p.id}><span className={`avatar avatar-${i % 4}`}>{p.name[0]}</span><span className="truncate font-bold">{p.name}</span><span className="online" /></div>)}</div><div className="mt-auto flex items-center justify-between gap-4 pt-8">{error ? <span className="pin-error-message">{error}</span> : <span className="flex items-center gap-2 text-sm text-white/45"><Radio size={16} className="text-lime-300" />Ждём остальных</span>}<Button onClick={onStart} className="primary-host-button h-14 px-8"><Play fill="currentColor" /> Начать игру</Button></div></div></div></section>;
+  return <section className="host-page"><div className="grid gap-6 lg:grid-cols-[360px_1fr]"><div className="qr-card"><div className="flex items-center justify-between gap-3"><p className="eyebrow">Комната готова</p><button onClick={onRegenerate} className="refresh-code" title="Создать новую комнату"><RefreshCw size={15}/> Новый код</button></div><h1 className="mt-2 text-3xl font-black">Сканируйте и входите</h1><div className="qr-wrap"><QRCodeSVG key={roomCode} value={joinUrl} size={210} fgColor="#17171f" /></div><p className="text-center text-sm text-white/50">Код комнаты</p><div className="room-code">{roomCode.slice(0,3)} {roomCode.slice(3)}</div></div><div className="panel flex min-h-[570px] flex-col"><div className="flex items-start justify-between"><div><p className="eyebrow">Открытое лобби</p><h2 className="mt-2 text-4xl font-black">Уже в игре: {participants.filter(p => p.is_online).length}</h2><p className="mt-2 text-white/50">Игроки появятся здесь сразу после подключения.</p></div><Users className="text-violet-300" size={36} /></div><div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">{participants.map((p, i) => <div className={p.is_online ? 'player-chip' : 'player-chip opacity-45'} key={p.id}><span className={`avatar avatar-${i % 4}`}>{p.name[0]}</span><span className="truncate font-bold">{p.name}</span><span className={p.is_online ? 'online' : 'online offline'} /></div>)}</div><div className="mt-auto flex items-center justify-between gap-4 pt-8">{error ? <span className="pin-error-message">{error}</span> : <span className="flex items-center gap-2 text-sm text-white/45"><Radio size={16} className="text-lime-300" />Ждём остальных</span>}<Button onClick={onStart} className="primary-host-button h-14 px-8"><Play fill="currentColor" /> Начать игру</Button></div></div></div></section>;
 }
 
 function QuestionView({ question, index, total, timeLeft, answered, totalPlayers }: { question: Question; index: number; total: number; timeLeft: number; answered: number; totalPlayers: number }) {

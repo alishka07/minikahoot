@@ -38,30 +38,54 @@ export function PlayerApp({ locale, onLocale, onExit, initialRoom = '' }: { loca
   const [selected, setSelected] = useState<string[]>([]);
   const [result, setResult] = useState<{ correct: boolean; score: number } | null>(null);
   const socket = useRef<WebSocket | null>(null);
+  const playerToken = useRef('');
+  const keepAlive = useRef(0);
+  const retryTimer = useRef(0);
+  const wantJoin = useRef(false);
   const cleanCode = roomCode.replace(/\D/g, '').slice(0, 6);
 
-  useEffect(() => () => socket.current?.close(), []);
+  useEffect(() => () => { wantJoin.current = false; window.clearInterval(keepAlive.current); window.clearTimeout(retryTimer.current); socket.current?.close(); }, []);
   useEffect(() => {
     if (screen !== 'question') return;
     const timer = window.setInterval(() => setTimeLeft(v => Math.max(0, +(v - .1).toFixed(1))), 100);
     return () => window.clearInterval(timer);
   }, [screen, question]);
 
-  const join = () => {
-    if (cleanCode.length !== 6 || !name.trim()) return;
-    setJoining(true); setPinError(false);
+  // Прокси рвёт молчащий сокет примерно через 27 секунд, а в ожидании вопроса трафика нет.
+  // Держим ping'ом; при обрыве переподключаемся и входим тем же токеном - иначе сервер
+  // заводит второго участника, и в лобби появляется «лишний» игрок.
+  const connectPlayer = (first: boolean) => {
+    window.clearInterval(keepAlive.current);
+    window.clearTimeout(retryTimer.current);
     let opened = false;
-    const ws = new WebSocket(`${WS}/${cleanCode}/?role=player`); socket.current = ws;
+    const ws = new WebSocket(`${WS}/${cleanCode}/?role=player${playerToken.current ? `&player=${playerToken.current}` : ''}`); socket.current = ws;
     const connectionTimer = window.setTimeout(() => { if (!opened) ws.close(); }, 15000);
-    ws.onopen = () => { opened = true; window.clearTimeout(connectionTimer); setConnected(true); setJoining(false); setJoinSuccess(true); ws.send(JSON.stringify({ type: 'join_lobby', name: name.trim() })); window.setTimeout(() => setLeavingJoin(true), 450); window.setTimeout(() => setScreen('waiting'), 900); };
-    ws.onclose = () => { window.clearTimeout(connectionTimer); setConnected(false); setJoining(false); if (!opened) { setPinError(false); window.requestAnimationFrame(() => setPinError(true)); } };
+    ws.onopen = () => {
+      opened = true; window.clearTimeout(connectionTimer); setConnected(true); setJoining(false);
+      ws.send(JSON.stringify({ type: 'join_lobby', name: name.trim(), token: playerToken.current }));
+      keepAlive.current = window.setInterval(() => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping', t: Date.now() })); }, 10000);
+      if (first) { setJoinSuccess(true); window.setTimeout(() => setLeavingJoin(true), 450); window.setTimeout(() => setScreen('waiting'), 900); }
+    };
+    ws.onclose = () => {
+      window.clearTimeout(connectionTimer); window.clearInterval(keepAlive.current); setConnected(false); setJoining(false);
+      if (first && !opened) { setPinError(false); window.requestAnimationFrame(() => setPinError(true)); return; }
+      if (wantJoin.current) retryTimer.current = window.setTimeout(() => connectPlayer(false), 2000);
+    };
     ws.onmessage = ({ data }) => {
       const event = JSON.parse(data);
+      if (event.type === 'joined') playerToken.current = event.token ?? '';
       if (event.participants) setPlayers(event.participants);
       if (event.type === 'game_started' || event.type === 'question') { setQuestion(event.question); setSelected([]); setResult(null); setTimeLeft(event.question.duration ?? 10); setScreen('question'); }
       if (event.type === 'answer_result' && event.accepted) { setResult({ correct: event.correct, score: event.score }); setScreen('result'); }
       if (event.type === 'game_finished') setScreen('finished');
     };
+  };
+
+  const join = () => {
+    if (cleanCode.length !== 6 || !name.trim()) return;
+    setJoining(true); setPinError(false);
+    wantJoin.current = true;
+    connectPlayer(true);
   };
   const submit = (optionIds=selected) => { if (!question || optionIds.length === 0 || timeLeft === 0) return; socket.current?.send(JSON.stringify({ type: 'submit_answer', question_id: question.id, option_id: optionIds[0], option_ids: optionIds })); if (!connected) window.setTimeout(() => { setResult({ correct: false, score: 0 }); setScreen('result'); }, 450); };
   const answer = (optionId: string) => { if (!question || timeLeft === 0) return; if (question.is_multiple) { setSelected(value => value.includes(optionId) ? value.filter(id => id !== optionId) : [...value, optionId]); } else if (selected.length === 0) { setSelected([optionId]); submit([optionId]); } };

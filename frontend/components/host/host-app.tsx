@@ -14,6 +14,11 @@ const API = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api';
 const WS = process.env.NEXT_PUBLIC_WS_URL ?? 'ws://localhost:8000/ws/quiz';
 const answerColors = ['answer-red', 'answer-blue', 'answer-gold', 'answer-green'];
 const shapes = ['▲', '◆', '●', '■'];
+type ReportAnswer = { participant_id: number; name: string; response_ms: number; is_correct: boolean; points: number };
+type ReportQuestion = { question_id: number; index: number; text: string; answered_count: number; correct_count: number; avg_response_ms: number | null; answers: ReportAnswer[] };
+type Report = { leaderboard: Participant[]; questions: ReportQuestion[] };
+const asSeconds = (ms: number | null | undefined) => ms == null ? '—' : `${(ms / 1000).toFixed(1)}s`;
+
 const tabs: { id: HostScreen; label: string }[] = [{ id: 'editor', label: 'Редактор' }, { id: 'lobby', label: 'Лобби' }, { id: 'question', label: 'Вопрос' }, { id: 'stats', label: 'Статистика' }, { id: 'podium', label: 'Подиум' }];
 
 const questionBody = (q: Question, order: number) => JSON.stringify({ order, text: q.text, options: q.options, correct_option: q.correctOptions[0], correct_options: q.correctOptions, is_multiple: q.multiple, image: q.image ?? '' });
@@ -50,6 +55,7 @@ export function HostApp({ onExit }: { onExit: () => void }) {
   const [gameFinished, setGameFinished] = useState(false);
   const [lobbyError, setLobbyError] = useState('');
   const [opening, setOpening] = useState(false);
+  const [report, setReport] = useState<Report | null>(null);
   const socket = useRef<WebSocket | null>(null);
   const hostToken = useRef('');
   const syncedIds = useRef(new Set<number>());
@@ -102,6 +108,16 @@ export function HostApp({ onExit }: { onExit: () => void }) {
       }
     };
   });
+  useEffect(() => {
+    if (screen !== 'podium' || !roomCode) return;
+    void (async () => {
+      try {
+        const response = await fetch(`${API}/rooms/${roomCode}/results/?token=${hostToken.current}`);
+        if (response.ok) setReport(await response.json() as Report);
+      } catch { setReport(null); }
+    })();
+  }, [screen, roomCode]);
+
   useEffect(() => {
     if (screen !== 'question') return;
     const timer = window.setInterval(() => setTimeLeft(value => {
@@ -164,7 +180,7 @@ export function HostApp({ onExit }: { onExit: () => void }) {
       {screen === 'lobby' && <Lobby roomCode={roomCode} joinUrl={joinUrl} participants={participants} error={lobbyError} onStart={start} onRegenerate={() => { if (participants.length === 0 || window.confirm(`В комнате уже ${participants.length} игрок(ов). Новый код создаст другую комнату, и они останутся в прежней. Продолжить?`)) void openLobby(true); }} />}
       {screen === 'question' && current && <QuestionView question={current} index={questionIndex} total={questions.length} timeLeft={timeLeft} answered={answered} totalPlayers={participants.length} />}
       {screen === 'stats' && current && <StatsView question={current} participants={participants} answered={answered} counts={answerCounts} hasResults={completedRounds > 0 && answered > 0} isLast={questionIndex === questions.length - 1} onNext={next} />}
-      {screen === 'podium' && <Podium participants={leaders} available={gameFinished && participants.length > 0} onRestart={() => { setQuestionIndex(0); void openLobby(true); }} />}
+      {screen === 'podium' && <Podium participants={leaders} report={report} available={gameFinished && participants.length > 0} onRestart={() => { setQuestionIndex(0); void openLobby(true); }} />}
     </div>
   </main>;
 }
@@ -188,10 +204,26 @@ function StatsView({ question, participants, answered, counts: answerCounts, has
   return <section className="host-page"><div className="host-heading"><div><p className="eyebrow">Результаты вопроса</p><h1>{question.text}</h1><p>Получено {answered} ответов. Правильные варианты подсвечены лаймовым.</p></div><Button onClick={onNext} className="primary-host-button">{isLast ? 'Показать подиум' : 'Следующий вопрос'} <ChevronRight /></Button></div><div className="grid gap-5 lg:grid-cols-[1fr_330px]"><div className="panel"><div className="flex h-[330px] items-end gap-3">{question.options.map((option, i) => { const correct = question.correctOptions.includes(option.id); return <div className="flex h-full flex-1 flex-col justify-end" key={option.id}><div className="mb-2 text-center text-2xl font-black">{counts[i]}</div><div className={`stat-bar ${correct ? 'correct' : ''}`} style={{ height: `${Math.max(18, counts[i] / max * 72)}%` }} /> <div className={`mt-3 rounded-xl p-3 text-center text-sm font-bold ${correct ? 'bg-lime-400 text-zinc-950' : 'bg-white/5 text-white/60'}`}>{correct && <Check className="mx-auto mb-1" size={18} />}{option.text}</div></div>})}</div></div><aside className="panel"><p className="eyebrow">Рейтинг</p><h2 className="mt-2 text-2xl font-black">После вопроса</h2>{[...participants].sort((a,b)=>b.score-a.score).slice(0, 4).map((p, i) => <div className="player-row" key={p.id}><span className="rank">{i + 1}</span><b className="flex-1">{p.name}</b><span className="text-white/45">{p.score}</span></div>)}</aside></div></section>;
 }
 
-function Podium({ participants, available, onRestart }: { participants: Participant[]; available: boolean; onRestart: () => void }) {
+function Podium({ participants, report, available, onRestart }: { participants: Participant[]; report: Report | null; available: boolean; onRestart: () => void }) {
   if (!available) return <EmptyResults kind="podium" />;
   const top = participants.slice(0, 3); const podiumOrder = [top[1], top[0], top[2]].filter(Boolean);
-  return <section className="host-page text-center"><p className="eyebrow">Игра завершена</p><h1 className="mt-3 text-5xl font-black">Подиум</h1><div className="podium">{podiumOrder.map((p, visualIndex) => { const place = visualIndex === 1 ? 1 : visualIndex === 0 ? 2 : 3; return <div className={`podium-person place-${place}`} key={p.id}><span className="podium-avatar">{place === 1 && <Crown size={22} />}{p.name[0]}</span><b>{p.name}</b><strong>{p.score}</strong><div className="podium-block">{place}</div></div>})}</div><div className="mx-auto mt-8 max-w-2xl panel text-left">{participants.slice(3).map((p, i) => <div className="player-row" key={p.id}><span className="rank">{i + 4}</span><b className="flex-1">{p.name}</b><strong>{p.score}</strong></div>)}</div><Button onClick={onRestart} variant="outline" className="secondary-host-button mt-6"><RotateCcw /> Сыграть ещё раз</Button></section>;
+  return <section className="host-page text-center"><p className="eyebrow">Игра завершена</p><h1 className="mt-3 text-5xl font-black">Подиум</h1><div className="podium">{podiumOrder.map((p, visualIndex) => { const place = visualIndex === 1 ? 1 : visualIndex === 0 ? 2 : 3; return <div className={`podium-person place-${place}`} key={p.id}><span className="podium-avatar">{place === 1 && <Crown size={22} />}{p.name[0]}</span><b>{p.name}</b><strong>{p.score}</strong><div className="podium-block">{place}</div></div>})}</div><div className="mx-auto mt-8 max-w-2xl panel text-left">{participants.slice(3).map((p, i) => <div className="player-row" key={p.id}><span className="rank">{i + 4}</span><b className="flex-1">{p.name}</b><strong>{p.score}</strong></div>)}</div>{report && report.questions.length > 0 && <div className="report mx-auto mt-10 max-w-5xl panel text-left">
+      <p className="eyebrow">Разбор игры</p>
+      <table><thead><tr><th>Участник</th><th>Верных</th><th>Ср. время</th>{report.questions.map(q => <th key={q.question_id} title={q.text}>№{q.index}</th>)}</tr></thead>
+      <tbody>{report.leaderboard.map(player => <tr key={player.id}>
+        <td><b>{player.name}</b></td>
+        <td>{player.correct ?? 0} / {report.questions.length}</td>
+        <td>{asSeconds(player.avg_response_ms)}</td>
+        {report.questions.map(q => { const answer = q.answers.find(a => a.participant_id === player.id);
+          return <td key={q.question_id}>{answer
+            ? <><span className={answer.is_correct ? 'mark ok' : 'mark no'}>{answer.is_correct ? '✓' : '✗'}</span><small>{asSeconds(answer.response_ms)}</small></>
+            : <><span className="mark skip">—</span><small>нет ответа</small></>}</td>; })}
+      </tr>)}</tbody>
+      <tfoot><tr><td colSpan={2}>Верно ответили</td><td>Ср. время</td>{report.questions.map(q => <td key={q.question_id}>{q.correct_count}/{q.answered_count}<small>{asSeconds(q.avg_response_ms)}</small></td>)}</tr></tfoot>
+      </table>
+      <div className="report-legend">{report.questions.map(q => <span key={q.question_id}><b>№{q.index}</b> {q.text}</span>)}</div>
+    </div>}
+    <Button onClick={onRestart} variant="outline" className="secondary-host-button mt-6"><RotateCcw /> Сыграть ещё раз</Button></section>;
 }
 
 function EmptyResults({ kind }: { kind: 'stats' | 'podium' }) {

@@ -41,6 +41,28 @@
 @keyframes demo-count{0%{translate:0 0}56%{translate:0 0;animation-timing-function:steps(60,end)}70%{translate:0 calc(var(--h)*-60)}93%{translate:0 calc(var(--h)*-60);animation-timing-function:steps(1,end)}100%{translate:0 0}}
 @keyframes demo-cursor{0%,44%{opacity:0;translate:20cqw 22cqw;scale:1}50%{opacity:1}58%{opacity:1;translate:none;scale:1}60%{scale:.78}63%{scale:1}76%{opacity:1;translate:none}84%,100%{opacity:0;translate:8cqw 12cqw}}
 .stat-bar{width:100%;min-height:18px;border-radius:14px 14px 5px 5px;background:linear-gradient(#8b5cf6,#5b21b6);transition:height .5s}.stat-bar.correct{background:linear-gradient(#bef264,#65a30d);box-shadow:0 0 25px #a3e63545}
+
+/* Итоги для игроков: таблица публичная, свою строку подсвечиваем */
+.result-board{display:flex;width:100%;flex-direction:column;gap:.5rem;margin-top:1rem}
+.result-row{display:flex;align-items:center;gap:.7rem;padding:.7rem .8rem;border:1px solid transparent;border-radius:12px;background:#ffffff0a;text-align:left}
+.result-row.me{border-color:#a3e63559;background:#a3e63519}
+.result-row small{color:#ffffff8a;font-weight:700;white-space:nowrap}
+.result-row strong{min-width:3.4rem;text-align:right;color:#bef264}
+
+/* Разбор игры у ведущего: матрица «участник x вопрос» - где и за сколько ответили */
+.report{overflow-x:auto}
+.report table{width:100%;border-collapse:collapse;margin-top:1rem;font-size:.85rem}
+.report th,.report td{padding:.6rem .7rem;border-bottom:1px solid #ffffff12;text-align:left;white-space:nowrap}
+.report th{color:#ffffff70;font-size:.7rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+.report tbody tr:hover{background:#ffffff07}
+.report tfoot td{border-bottom:0;color:#ffffff8a;font-weight:800}
+.report .mark{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;font-weight:900}
+.report .mark.ok{background:#269c6340;color:#bef264}
+.report .mark.no{background:#e6444440;color:#fca5a5}
+.report .mark.skip{background:#ffffff0d;color:#ffffff4d}
+.report small{display:block;margin-top:.2rem;color:#ffffff5c;font-size:.68rem;font-weight:700}
+.report-legend{display:flex;flex-direction:column;gap:.3rem;margin-top:1rem;color:#ffffff70;font-size:.78rem}
+.report-legend b{color:#c4b5fd;margin-right:.4rem}
 .podium{display:flex;align-items:flex-end;justify-content:center;gap:1rem;min-height:390px;margin-top:2rem}.podium-person{display:flex;width:min(26vw,220px);flex-direction:column;align-items:center}.podium-person b{margin-top:.8rem;font-size:1.1rem}.podium-person strong{margin:.25rem 0 .8rem;color:#a3e635;font-size:1.4rem}.podium-avatar{display:grid;place-items:center;width:64px;height:64px;border-radius:50%;background:#8b5cf6;font-size:1.5rem;font-weight:950;box-shadow:0 0 35px #8b5cf666}.podium-block{display:grid;width:100%;height:170px;place-items:start center;padding-top:1rem;border-radius:20px 20px 4px 4px;background:linear-gradient(#a3e635,#a3e63522);color:#18181b;font-size:2rem;font-weight:950}.place-2 .podium-block{height:125px;background:linear-gradient(#38bdf8,#38bdf822)}.place-3 .podium-block{height:95px;background:linear-gradient(#f472b6,#f472b622)}.place-1 .podium-avatar{background:#a3e635;color:#18181b}
 .language-switch{display:flex;gap:.2rem;padding:.25rem;border:1px solid #ffffff17;border-radius:12px;background:#ffffff0a}.language-switch button{border:0;border-radius:8px;background:transparent;color:#ffffff66;padding:.4rem .55rem;font-size:.7rem;font-weight:900}.language-switch button:hover{color:#fff}.language-switch button.active{background:#fff;color:#18181b}
 .empty-results{display:flex;min-height:560px;flex-direction:column;align-items:center;justify-content:center;border:1px solid #ffffff14;border-radius:26px;background:#20202b99;padding:2rem;text-align:center}.empty-results>span{display:grid;width:76px;height:76px;place-items:center;margin-bottom:1.5rem;border-radius:24px;background:#8b5cf61f;color:#c4b5fd}.empty-results h1{margin:.7rem 0 .5rem;font-size:clamp(2rem,5vw,3.4rem);font-weight:950;letter-spacing:-.04em}.empty-results>p:last-child{max-width:35rem;color:#ffffff73;font-size:1rem;line-height:1.6}

@@ -8,7 +8,7 @@ import logging
 from datetime import timedelta
 from django.conf import settings
 from django.db import IntegrityError,transaction
-from django.db.models import F
+from django.db.models import Avg,Count,F,Q
 from django.utils import timezone
 from .models import Answer,GameEvent,GameSession,Participant,Question,Room
 
@@ -110,8 +110,18 @@ def public_stats(stats):
                         'response_ms':row['response_ms']} for row in stats['answers']]}
 
 def leaderboard(session):
-    return [{'id':row.id,'name':row.name,'score':row.score,'is_online':row.is_online}
-            for row in Participant.objects.filter(session=session).order_by('-score','name')]
+    """Таблица для всех: помимо очков - сколько верных и как быстро отвечал участник."""
+    stats={row['participant_id']:row for row in Answer.objects.filter(session=session)
+           .values('participant_id')
+           .annotate(correct=Count('id',filter=Q(is_correct=True)),answered=Count('id'),avg_ms=Avg('response_ms'))}
+    rows=[]
+    for row in Participant.objects.filter(session=session).order_by('-score','name'):
+        stat=stats.get(row.id)
+        rows.append({'id':row.id,'name':row.name,'score':row.score,'is_online':row.is_online,
+                     'correct':stat['correct'] if stat else 0,
+                     'answered':stat['answered'] if stat else 0,
+                     'avg_response_ms':round(stat['avg_ms']) if stat and stat['avg_ms'] is not None else None})
+    return rows
 
 # ---------------------------------------------------------------- лента событий
 def log_event(session,kind,participant=None,question=None,**payload):

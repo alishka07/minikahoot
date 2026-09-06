@@ -87,6 +87,12 @@ export function PlayerApp({ locale, onLocale, onExit, initialRoom = '' }: { loca
       if (event.participants) setPlayers(event.participants);
       if (event.type === 'game_started' || event.type === 'question') { setQuestion(event.question); setSelected([]); setResult(null); setTimeLeft(event.question.duration ?? 10); setScreen('question'); }
       if (event.type === 'answer_result' && event.accepted) { setResult({ correct: event.correct, score: event.score }); setScreen('result'); }
+      if (event.type === 'question_ended') {
+        // Свой результат уже мог прийти - не затираем; не ответившему показываем ноль.
+        setTimeLeft(0);
+        setResult(current => current ?? { correct: false, score: 0 });
+        setScreen(current => current === 'question' ? 'result' : current);
+      }
       if (event.type === 'game_finished') setScreen('finished');
     };
   };

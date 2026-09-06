@@ -95,6 +95,11 @@ export function HostApp({ onExit }: { onExit: () => void }) {
       }
       if (event.type === 'game_started') { const index = liveQuestionsRef.current.findIndex(q => q.id === event.question.id); if (index >= 0) setQuestionIndex(index); setTimeLeft(10); setAnswered(0); setAnswerCounts({}); setScreen('question'); }
       if (event.type === 'stats_update') { setAnswered(event.answered_count ?? 0); setAnswerCounts(event.answer_counts ?? {}); }
+      if (event.type === 'question_ended') {
+        setAnswered(event.answered_count ?? 0); setAnswerCounts(event.answer_counts ?? {}); setTimeLeft(0);
+        setCompletedRounds(value => Math.max(value, event.index ?? 1));
+        setScreen(current => current === 'question' ? 'stats' : current);
+      }
     };
   });
   useEffect(() => {

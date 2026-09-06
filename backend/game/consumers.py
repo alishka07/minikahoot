@@ -156,6 +156,7 @@ class QuizConsumer(AsyncJsonWebsocketConsumer):
         await self.channel_layer.group_send(self.group,{'type':'game.answer','stats':stats,'event':event,
                                                         'participants':participants,
                                                         'server_time':services.now_ms()})
+        engine.nudge(self.code)  # ответил последний - цикл закроет вопрос сразу, не дожидаясь тика
 
     # ------------------------------------------------------------ рассылка
     async def push_state(self):

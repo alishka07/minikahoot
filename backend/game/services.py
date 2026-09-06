@@ -332,7 +332,7 @@ def submit(code,participant_id,question_id,option_ids):
         Participant.objects.filter(id=player.id).update(score=F('score')+points,stage=Participant.ANSWERED,
                                                         current_index=session.current_index,
                                                         current_question=question,last_seen_at=moment)
-        player.refresh_from_db(fields=['score'])
+        player.score+=points  # строка под select_for_update: значение известно без ещё одного рейса к БД
         event=log_event(session,GameEvent.ANSWERED,participant=player,question=question,
                         response_ms=elapsed,index=session.current_index+1)
         stats=question_stats(session,question)

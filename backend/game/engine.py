@@ -19,8 +19,25 @@ WORKER=uuid.uuid4().hex
 LOCK_TTL=15
 REFRESH_EVERY=5  # секунд между продлениями блокировки - с большим запасом от LOCK_TTL
 _tasks={}
+_wakeups={}
 
 def group_of(code): return f'quiz_{code}'
+
+def _wakeup(code):
+    event=_wakeups.get(code)
+    if event is None: event=_wakeups[code]=asyncio.Event()
+    return event
+
+def nudge(code):
+    """Разбудить цикл комнаты немедленно - например, когда ответил последний игрок."""
+    _wakeup(code).set()
+
+async def _sleep(code,seconds):
+    """Сон, прерываемый nudge(). Решение по-прежнему принимает сам цикл."""
+    event=_wakeup(code)
+    try: await asyncio.wait_for(event.wait(),timeout=seconds)
+    except asyncio.TimeoutError: pass
+    event.clear()
 def cfg(key): return settings.QUIZ[key]
 
 # ------------------------------------------------------------------ блокировка воркера
@@ -80,18 +97,18 @@ async def run(code):
             if state['status']==S.COUNTDOWN:
                 if state['starts_at'] is None or moment>=state['starts_at']:
                     await open_now(code); continue
-                await asyncio.sleep(min(0.2,max(0.01,state['starts_at']-moment)))
+                await _sleep(code,min(0.2,max(0.01,state['starts_at']-moment)))
             elif state['status']==S.QUESTION:
                 deadline=(state['ends_at'] or moment)+cfg('GRACE_MS')/1000
                 if moment>=deadline or state['all_answered']:
                     await close_now(code); continue
                 await broadcast_tick(code)
-                await asyncio.sleep(min(cfg('TICK_MS')/1000,max(0.05,deadline-time.time())))
+                await _sleep(code,min(cfg('TICK_MS')/1000,max(0.05,deadline-time.time())))
             else:  # reveal
                 if not state['auto_advance']: break  # дальше решает хост, он же перезапустит цикл
                 if state['reveal_ends_at'] is None or moment>=state['reveal_ends_at']:
                     await advance_now(code); continue
-                await asyncio.sleep(min(0.2,max(0.01,state['reveal_ends_at']-moment)))
+                await _sleep(code,min(0.2,max(0.01,state['reveal_ends_at']-moment)))
             if moment-last_refresh>=REFRESH_EVERY:
                 if not await _refresh(code): log.warning('engine %s: потеряна блокировка',code); break
                 last_refresh=moment
@@ -99,6 +116,7 @@ async def run(code):
     except Exception:
         log.exception('engine %s: цикл упал',code)
     finally:
+        _wakeups.pop(code,None)
         await _release(code)
         log.info('engine %s: цикл остановлен',code)
 

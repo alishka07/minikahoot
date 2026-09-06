@@ -20,15 +20,25 @@ elif DATABASE_URL:
         'CONN_MAX_AGE':int(os.getenv('POSTGRES_CONN_MAX_AGE','60')),'OPTIONS':{'sslmode':_sslmode}}}
 else:
     DATABASES={'default':{'ENGINE':'django.db.backends.postgresql','NAME':os.getenv('POSTGRES_DB','quiz'),'USER':os.getenv('POSTGRES_USER','quiz'),'PASSWORD':os.getenv('POSTGRES_PASSWORD','quiz'),'HOST':os.getenv('POSTGRES_HOST','localhost'),'PORT':os.getenv('POSTGRES_PORT','5432'),'CONN_MAX_AGE':int(os.getenv('POSTGRES_CONN_MAX_AGE','60'))}}
-REDIS_URL=os.getenv('REDIS_URL','redis://localhost:6379/0')
-# Сетевой Redis (Upstash и подобные) закрывает простаивающие соединения со своей стороны.
-# Без health_check_interval первая же рассылка после паузы уходит в мёртвый сокет: лобби
-# не видит вошедшего игрока, а сокет ведущего отваливается. redis-py с этой настройкой
-# пингует соединение перед использованием и молча переподключается.
-# socket_timeout здесь ставить нельзя - channels-redis читает очередь блокирующим вызовом.
-REDIS_POOL={'health_check_interval':30,'socket_keepalive':True,'socket_connect_timeout':5}
-CHANNEL_LAYERS={'default':{'BACKEND':'channels_redis.core.RedisChannelLayer','CONFIG':{'hosts':[{'address':REDIS_URL,**REDIS_POOL}],'capacity':2000,'expiry':30}}}
-CACHES={'default':{'BACKEND':'django.core.cache.backends.redis.RedisCache','LOCATION':REDIS_URL,'OPTIONS':dict(REDIS_POOL)}}
+# Redis нужен только чтобы связать НЕСКОЛЬКО процессов между собой. Daphne на бесплатном
+# хостинге работает одним процессом, поэтому по умолчанию держим и рассылку событий, и
+# блокировку движка в памяти: без сетевого круга к чужому провайдеру на каждое событие и
+# без целого класса ошибок с оборванными простаивающими соединениями.
+# Задайте REDIS_URL - вернётся Redis. Это ОБЯЗАТЕЛЬНО, если воркеров больше одного:
+# иначе игроки одной комнаты окажутся на разных процессах и перестанут видеть друг друга.
+REDIS_URL=os.getenv('REDIS_URL','').strip()
+if REDIS_URL:
+    # Сетевой Redis (Upstash и подобные) закрывает простаивающие соединения со своей стороны.
+    # Без health_check_interval первая же рассылка после паузы уходит в мёртвый сокет: лобби
+    # не видит вошедшего игрока, а сокет ведущего отваливается. redis-py с этой настройкой
+    # пингует соединение перед использованием и молча переподключается.
+    # socket_timeout здесь ставить нельзя - channels-redis читает очередь блокирующим вызовом.
+    REDIS_POOL={'health_check_interval':30,'socket_keepalive':True,'socket_connect_timeout':5}
+    CHANNEL_LAYERS={'default':{'BACKEND':'channels_redis.core.RedisChannelLayer','CONFIG':{'hosts':[{'address':REDIS_URL,**REDIS_POOL}],'capacity':2000,'expiry':30}}}
+    CACHES={'default':{'BACKEND':'django.core.cache.backends.redis.RedisCache','LOCATION':REDIS_URL,'OPTIONS':dict(REDIS_POOL)}}
+else:
+    CHANNEL_LAYERS={'default':{'BACKEND':'channels.layers.InMemoryChannelLayer','CONFIG':{'capacity':2000,'expiry':30}}}
+    CACHES={'default':{'BACKEND':'django.core.cache.backends.locmem.LocMemCache','LOCATION':'quizo-engine'}}
 DEFAULT_AUTO_FIELD='django.db.models.BigAutoField'; USE_TZ=True
 REST_FRAMEWORK={'DEFAULT_PERMISSION_CLASSES':['rest_framework.permissions.AllowAny']}
 

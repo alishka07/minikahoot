@@ -83,6 +83,16 @@ export function HostApp({ onExit }: { onExit: () => void }) {
     ws.onmessage = ({ data }) => {
       const event = JSON.parse(data);
       if (event.participants) setParticipants(event.participants);
+      if (event.type === 'state_sync') {
+        // То же для ведущего: после обрыва он иначе залипал в лобби при идущей игре.
+        if (event.status === 'question' && event.question) {
+          const index = liveQuestionsRef.current.findIndex(q => q.id === event.question.id);
+          if (index >= 0) setQuestionIndex(index);
+          setTimeLeft(Math.max(0, Math.round(((event.ends_at ?? 0) - event.server_time) / 100) / 10));
+          setScreen(current => current === 'lobby' || current === 'question' ? 'question' : current);
+        }
+        if (event.status === 'finished') { setGameFinished(true); setScreen(current => current === 'lobby' ? 'podium' : current); }
+      }
       if (event.type === 'game_started') { const index = liveQuestionsRef.current.findIndex(q => q.id === event.question.id); if (index >= 0) setQuestionIndex(index); setTimeLeft(10); setAnswered(0); setAnswerCounts({}); setScreen('question'); }
       if (event.type === 'stats_update') { setAnswered(event.answered_count ?? 0); setAnswerCounts(event.answer_counts ?? {}); }
     };

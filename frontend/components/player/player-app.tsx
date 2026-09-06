@@ -64,7 +64,7 @@ export function PlayerApp({ locale, onLocale, onExit, initialRoom = '' }: { loca
       opened = true; window.clearTimeout(connectionTimer); setConnected(true); setJoining(false);
       ws.send(JSON.stringify({ type: 'join_lobby', name: name.trim(), token: playerToken.current }));
       keepAlive.current = window.setInterval(() => { if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'ping', t: Date.now() })); }, 10000);
-      if (first) { setJoinSuccess(true); window.setTimeout(() => setLeavingJoin(true), 450); window.setTimeout(() => setScreen('waiting'), 900); }
+      if (first) { setJoinSuccess(true); window.setTimeout(() => setLeavingJoin(true), 450); window.setTimeout(() => setScreen(current => current === 'join' ? 'waiting' : current), 900); }
     };
     ws.onclose = () => {
       window.clearTimeout(connectionTimer); window.clearInterval(keepAlive.current); setConnected(false); setJoining(false);
@@ -74,6 +74,16 @@ export function PlayerApp({ locale, onLocale, onExit, initialRoom = '' }: { loca
     ws.onmessage = ({ data }) => {
       const event = JSON.parse(data);
       if (event.type === 'joined') playerToken.current = event.token ?? '';
+      // При переподключении сервер присылает полное состояние, а не game_started.
+      // Без этой ветки игрок после обрыва оставался на «ожидании», пока все отвечали.
+      if (event.type === 'state_sync') {
+        if (event.status === 'question' && event.question) {
+          setQuestion(event.question);
+          setTimeLeft(Math.max(0, Math.round(((event.ends_at ?? 0) - event.server_time) / 100) / 10));
+          if (!event.me?.answered) { setSelected([]); setResult(null); setScreen('question'); }
+        }
+        if (event.status === 'finished') setScreen('finished');
+      }
       if (event.participants) setPlayers(event.participants);
       if (event.type === 'game_started' || event.type === 'question') { setQuestion(event.question); setSelected([]); setResult(null); setTimeLeft(event.question.duration ?? 10); setScreen('question'); }
       if (event.type === 'answer_result' && event.accepted) { setResult({ correct: event.correct, score: event.score }); setScreen('result'); }

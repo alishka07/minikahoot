@@ -17,6 +17,7 @@ const shapes = ['▲', '◆', '●', '■'];
 type ReportAnswer = { participant_id: number; name: string; response_ms: number; is_correct: boolean; points: number };
 type ReportQuestion = { question_id: number; index: number; text: string; answered_count: number; correct_count: number; avg_response_ms: number | null; answers: ReportAnswer[] };
 type Report = { leaderboard: Participant[]; questions: ReportQuestion[] };
+type FeedItem = { id: number; kind: string; name?: string | null };
 const asSeconds = (ms: number | null | undefined) => ms == null ? '—' : `${(ms / 1000).toFixed(1)}s`;
 
 const tabs: { id: HostScreen; label: string }[] = [{ id: 'editor', label: 'Редактор' }, { id: 'lobby', label: 'Лобби' }, { id: 'question', label: 'Вопрос' }, { id: 'stats', label: 'Статистика' }, { id: 'podium', label: 'Подиум' }];
@@ -56,6 +57,7 @@ export function HostApp({ onExit }: { onExit: () => void }) {
   const [lobbyError, setLobbyError] = useState('');
   const [opening, setOpening] = useState(false);
   const [report, setReport] = useState<Report | null>(null);
+  const [feed, setFeed] = useState<FeedItem[]>([]);
   const socket = useRef<WebSocket | null>(null);
   const hostToken = useRef('');
   const syncedIds = useRef(new Set<number>());
@@ -89,6 +91,7 @@ export function HostApp({ onExit }: { onExit: () => void }) {
     ws.onmessage = ({ data }) => {
       const event = JSON.parse(data);
       if (event.participants) setParticipants(event.participants);
+      if (event.feed) setFeed(list => [event.feed as FeedItem, ...list.filter(item => item.id !== event.feed.id)].slice(0, 8));
       if (event.type === 'state_sync') {
         // То же для ведущего: после обрыва он иначе залипал в лобби при идущей игре.
         if (event.status === 'question' && event.question) {
@@ -177,7 +180,7 @@ export function HostApp({ onExit }: { onExit: () => void }) {
     <div className="relative z-10">
       <HostHeader screen={screen} connected={connected} hasStats={completedRounds > 0 && answered > 0} hasPodium={gameFinished && participants.length > 0} onExit={onExit} onGo={setScreen} />
       {screen === 'editor' && <section className="host-page"><div className="host-heading"><div className="w-full max-w-2xl"><p className="eyebrow">Конструктор игры</p><Input value={quizTitle} onChange={event => setQuizTitle(event.target.value)} className="quiz-title-input" placeholder="Название викторины" /></div><div className="flex flex-wrap gap-3"><Button onClick={shuffle} disabled={questions.length < 2} variant="outline" className="secondary-host-button"><Shuffle /> Перемешать</Button><Button onClick={() => openLobby()} disabled={!canLaunch || opening} className="primary-host-button">{opening ? 'Открываем лобби…' : <>Открыть лобби <ChevronRight /></>}</Button></div></div>{lobbyError && <p className="pin-error-message">{lobbyError}</p>}{questions.length > 0 && <div className="run-order"><span>Порядок запуска</span>{questions.map((_, i) => <b key={i}>{i + 1}</b>)}</div>}<QuestionEditor questions={questions} onChange={setQuestions} /></section>}
-      {screen === 'lobby' && <Lobby roomCode={roomCode} joinUrl={joinUrl} participants={participants} error={lobbyError} onStart={start} onRegenerate={() => { if (participants.length === 0 || window.confirm(`В комнате уже ${participants.length} игрок(ов). Новый код создаст другую комнату, и они останутся в прежней. Продолжить?`)) void openLobby(true); }} />}
+      {screen === 'lobby' && <Lobby roomCode={roomCode} joinUrl={joinUrl} participants={participants} feed={feed} error={lobbyError} onStart={start} onRegenerate={() => { if (participants.length === 0 || window.confirm(`В комнате уже ${participants.length} игрок(ов). Новый код создаст другую комнату, и они останутся в прежней. Продолжить?`)) void openLobby(true); }} />}
       {screen === 'question' && current && <QuestionView question={current} index={questionIndex} total={questions.length} timeLeft={timeLeft} answered={answered} totalPlayers={participants.length} />}
       {screen === 'stats' && current && <StatsView question={current} participants={participants} answered={answered} counts={answerCounts} hasResults={completedRounds > 0 && answered > 0} isLast={questionIndex === questions.length - 1} onNext={next} />}
       {screen === 'podium' && <Podium participants={leaders} report={report} available={gameFinished && participants.length > 0} onRestart={() => { setQuestionIndex(0); void openLobby(true); }} />}
@@ -185,12 +188,20 @@ export function HostApp({ onExit }: { onExit: () => void }) {
   </main>;
 }
 
+function LiveFeed({ items }: { items: FeedItem[] }) {
+  if (items.length === 0) return null;
+  const verb = (kind: string) => kind === 'answered' ? 'ответил' : kind === 'left' ? 'вышел' : kind === 'rejoined' ? 'вернулся' : 'вошёл в игру';
+  return <div className="live-feed"><span className="live-feed-title">Что происходит</span>
+    {items.map(item => <p key={item.id} className={item.kind === 'left' ? 'left' : ''}><i/><b>{item.name ?? '—'}</b> {verb(item.kind)}</p>)}
+  </div>;
+}
+
 function HostHeader({ screen, connected, hasStats, hasPodium, onExit, onGo }: { screen: HostScreen; connected: boolean; hasStats: boolean; hasPodium: boolean; onExit: () => void; onGo: (s: HostScreen) => void }) {
   return <header className="mx-auto flex max-w-7xl flex-wrap items-center gap-4"><button className="brand flex items-center gap-2" onClick={onExit}><span className="brand-mark">Q</span> QUIZO</button><nav className="host-tabs">{tabs.map(tab => { const locked = (tab.id === 'stats' && !hasStats) || (tab.id === 'podium' && !hasPodium); return <button key={tab.id} onClick={() => onGo(tab.id)} className={`${screen === tab.id ? 'active' : ''} ${locked ? 'locked' : ''}`}>{tab.label}{locked && <i />}</button> })}</nav><span className="ml-auto status-pill"><Wifi size={15} />{connected ? 'В эфире' : 'Демо-режим'}</span></header>;
 }
 
-function Lobby({ roomCode, joinUrl, participants, error, onStart, onRegenerate }: { roomCode: string; joinUrl: string; participants: Participant[]; error: string; onStart: () => void; onRegenerate: () => void }) {
-  return <section className="host-page"><div className="grid gap-6 lg:grid-cols-[360px_1fr]"><div className="qr-card"><div className="flex items-center justify-between gap-3"><p className="eyebrow">Комната готова</p><button onClick={onRegenerate} className="refresh-code" title="Создать новую комнату"><RefreshCw size={15}/> Новый код</button></div><h1 className="mt-2 text-3xl font-black">Сканируйте и входите</h1><div className="qr-wrap"><QRCodeSVG key={roomCode} value={joinUrl} size={210} fgColor="#17171f" /></div><p className="text-center text-sm text-white/50">Код комнаты</p><div className="room-code">{roomCode.slice(0,3)} {roomCode.slice(3)}</div></div><div className="panel flex min-h-[570px] flex-col"><div className="flex items-start justify-between"><div><p className="eyebrow">Открытое лобби</p><h2 className="mt-2 text-4xl font-black">Уже в игре: {participants.filter(p => p.is_online).length}</h2><p className="mt-2 text-white/50">Игроки появятся здесь сразу после подключения.</p></div><Users className="text-violet-300" size={36} /></div><div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">{participants.map((p, i) => <div className={p.is_online ? 'player-chip' : 'player-chip opacity-45'} key={p.id}><span className={`avatar avatar-${i % 4}`}>{p.name[0]}</span><span className="truncate font-bold">{p.name}</span><span className={p.is_online ? 'online' : 'online offline'} /></div>)}</div><div className="mt-auto flex items-center justify-between gap-4 pt-8">{error ? <span className="pin-error-message">{error}</span> : <span className="flex items-center gap-2 text-sm text-white/45"><Radio size={16} className="text-lime-300" />Ждём остальных</span>}<Button onClick={onStart} className="primary-host-button h-14 px-8"><Play fill="currentColor" /> Начать игру</Button></div></div></div></section>;
+function Lobby({ roomCode, joinUrl, participants, feed, error, onStart, onRegenerate }: { roomCode: string; joinUrl: string; participants: Participant[]; feed: FeedItem[]; error: string; onStart: () => void; onRegenerate: () => void }) {
+  return <section className="host-page"><div className="grid gap-6 lg:grid-cols-[360px_1fr]"><div className="qr-card"><div className="flex items-center justify-between gap-3"><p className="eyebrow">Комната готова</p><button onClick={onRegenerate} className="refresh-code" title="Создать новую комнату"><RefreshCw size={15}/> Новый код</button></div><h1 className="mt-2 text-3xl font-black">Сканируйте и входите</h1><div className="qr-wrap"><QRCodeSVG key={roomCode} value={joinUrl} size={210} fgColor="#17171f" /></div><p className="text-center text-sm text-white/50">Код комнаты</p><div className="room-code">{roomCode.slice(0,3)} {roomCode.slice(3)}</div></div><div className="panel flex min-h-[570px] flex-col"><div className="flex items-start justify-between"><div><p className="eyebrow">Открытое лобби</p><h2 className="mt-2 text-4xl font-black">Уже в игре: {participants.filter(p => p.is_online).length}</h2><p className="mt-2 text-white/50">Игроки появятся здесь сразу после подключения.</p></div><Users className="text-violet-300" size={36} /></div><div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">{participants.map((p, i) => <div className={p.is_online ? 'player-chip' : 'player-chip opacity-45'} key={p.id}><span className={`avatar avatar-${i % 4}`}>{p.name[0]}</span><span className="truncate font-bold">{p.name}</span><span className={p.is_online ? 'online' : 'online offline'} /></div>)}</div><LiveFeed items={feed}/><div className="mt-auto flex items-center justify-between gap-4 pt-8">{error ? <span className="pin-error-message">{error}</span> : <span className="flex items-center gap-2 text-sm text-white/45"><Radio size={16} className="text-lime-300" />Ждём остальных</span>}<Button onClick={onStart} className="primary-host-button h-14 px-8"><Play fill="currentColor" /> Начать игру</Button></div></div></div></section>;
 }
 
 function QuestionView({ question, index, total, timeLeft, answered, totalPlayers }: { question: Question; index: number; total: number; timeLeft: number; answered: number; totalPlayers: number }) {

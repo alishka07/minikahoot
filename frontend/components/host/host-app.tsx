@@ -15,7 +15,6 @@ const WS = process.env.NEXT_PUBLIC_WS_URL ?? 'ws://localhost:8000/ws/quiz';
 const answerColors = ['answer-red', 'answer-blue', 'answer-gold', 'answer-green'];
 const shapes = ['▲', '◆', '●', '■'];
 const tabs: { id: HostScreen; label: string }[] = [{ id: 'editor', label: 'Редактор' }, { id: 'lobby', label: 'Лобби' }, { id: 'question', label: 'Вопрос' }, { id: 'stats', label: 'Статистика' }, { id: 'podium', label: 'Подиум' }];
-const createLocalRoomCode = () => String(Math.floor(100000 + Math.random() * 900000));
 
 export function HostApp({ onExit }: { onExit: () => void }) {
   const [screen, setScreen] = useState<HostScreen>('editor');
@@ -30,6 +29,8 @@ export function HostApp({ onExit }: { onExit: () => void }) {
   const [answerCounts, setAnswerCounts] = useState<Record<string, number>>({});
   const [completedRounds, setCompletedRounds] = useState(0);
   const [gameFinished, setGameFinished] = useState(false);
+  const [lobbyError, setLobbyError] = useState('');
+  const [opening, setOpening] = useState(false);
   const socket = useRef<WebSocket | null>(null);
   const hostToken = useRef('');
   const current = questions[questionIndex] ?? questions[0];
@@ -48,9 +49,8 @@ export function HostApp({ onExit }: { onExit: () => void }) {
 
   const openLobby = async () => {
     socket.current?.close();
-    let code = createLocalRoomCode();
-    setRoomCode(code);
-    setScreen('lobby');
+    setLobbyError('');
+    setOpening(true);
     setParticipants([]);
     setAnswered(0);
     setAnswerCounts({});
@@ -58,29 +58,43 @@ export function HostApp({ onExit }: { onExit: () => void }) {
     setGameFinished(false);
     let liveQuestions = questions;
     try {
+      // Комнату заводим на сервере до показа лобби: раньше здесь был локальный случайный
+      // код, и QR успевал увести игрока в комнату, которой на сервере нет.
       const response = await fetch(`${API}/rooms/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
-      if (response.ok) {
-        const room = await response.json() as { room_code: string; host_token?: string }; code = room.room_code; setRoomCode(code);
-        hostToken.current = room.host_token ?? '';
-        liveQuestions = await Promise.all(questions.filter(q => q.text.trim()).map(async q => {
-          const savedResponse = await fetch(`${API}/rooms/${code}/questions/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: q.text, options: q.options, correct_option: q.correctOptions[0], correct_options: q.correctOptions, is_multiple: q.multiple, image: q.image ?? '' }) });
-          const saved = await savedResponse.json() as { id: number };
-          return { ...q, id: saved.id };
-        }));
-        setQuestions(liveQuestions);
-      }
-      const ws = new WebSocket(`${WS}/${code}/?role=host&token=${hostToken.current}`); socket.current = ws;
-      ws.onopen = () => setConnected(true); ws.onclose = () => setConnected(false);
-      ws.onmessage = ({ data }) => {
-        const event = JSON.parse(data);
-        if (event.participants) setParticipants(event.participants);
-        if (event.type === 'game_started') { const index = liveQuestions.findIndex(q => q.id === event.question.id); if (index >= 0) setQuestionIndex(index); setTimeLeft(10); setAnswered(0); setAnswerCounts({}); setScreen('question'); }
-        if (event.type === 'stats_update') { setAnswered(event.answered_count ?? 0); setAnswerCounts(event.answer_counts ?? {}); }
-      };
-    } catch { setConnected(false); }
-    setScreen('lobby');
+      if (!response.ok) throw new Error(`Не удалось создать комнату (${response.status})`);
+      const room = await response.json() as { room_code: string; host_token?: string };
+      const code = room.room_code;
+      hostToken.current = room.host_token ?? '';
+      liveQuestions = await Promise.all(questions.filter(q => q.text.trim()).map(async q => {
+        const savedResponse = await fetch(`${API}/rooms/${code}/questions/`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ text: q.text, options: q.options, correct_option: q.correctOptions[0], correct_options: q.correctOptions, is_multiple: q.multiple, image: q.image ?? '' }) });
+        if (!savedResponse.ok) throw new Error(`Вопрос не сохранён (${savedResponse.status})`);
+        const saved = await savedResponse.json() as { id: number };
+        return { ...q, id: saved.id };
+      }));
+      setQuestions(liveQuestions);
+      // Лобби открываем только после реально установленного сокета: иначе «Начать игру»
+      // уходила в пустоту, а игроки оставались ждать.
+      await new Promise<void>((resolve, reject) => {
+        const ws = new WebSocket(`${WS}/${code}/?role=host&token=${hostToken.current}`); socket.current = ws;
+        const timer = window.setTimeout(() => { ws.close(); reject(new Error('Сервер не ответил вовремя')); }, 20000);
+        ws.onopen = () => { window.clearTimeout(timer); setConnected(true); resolve(); };
+        ws.onclose = () => { window.clearTimeout(timer); setConnected(false); reject(new Error('Соединение с сервером закрыто')); };
+        ws.onmessage = ({ data }) => {
+          const event = JSON.parse(data);
+          if (event.participants) setParticipants(event.participants);
+          if (event.type === 'game_started') { const index = liveQuestions.findIndex(q => q.id === event.question.id); if (index >= 0) setQuestionIndex(index); setTimeLeft(10); setAnswered(0); setAnswerCounts({}); setScreen('question'); }
+          if (event.type === 'stats_update') { setAnswered(event.answered_count ?? 0); setAnswerCounts(event.answer_counts ?? {}); }
+        };
+      });
+      setRoomCode(code);
+      setScreen('lobby');
+    } catch (error) {
+      setConnected(false);
+      setLobbyError(error instanceof Error ? error.message : 'Не удалось открыть лобби');
+    }
+    setOpening(false);
   };
-  const start = () => { setTimeLeft(10); setAnswered(0); setAnswerCounts({}); setGameFinished(false); if (connected) socket.current?.send(JSON.stringify({ type: 'start_game' })); else setScreen('question'); };
+  const start = () => { if (!connected) { setLobbyError('Связь с сервером потеряна — откройте лобби заново.'); return; } setLobbyError(''); setTimeLeft(10); setAnswered(0); setAnswerCounts({}); setGameFinished(false); socket.current?.send(JSON.stringify({ type: 'start_game' })); };
   const next = () => { if (questionIndex + 1 < questions.length) { const nextIndex=questionIndex+1; setQuestionIndex(nextIndex); setTimeLeft(10); setAnswered(0); setAnswerCounts({}); if (connected) socket.current?.send(JSON.stringify({ type: 'show_question', question_id: questions[nextIndex].id })); setScreen('question'); } else { socket.current?.send(JSON.stringify({ type: 'finish_game' })); setGameFinished(true); setScreen('podium'); } };
   const shuffle = () => setQuestions(items => [...items].sort(() => Math.random() - .5));
   const leaders = useMemo(() => [...participants].sort((a, b) => b.score - a.score), [participants]);
@@ -90,8 +104,8 @@ export function HostApp({ onExit }: { onExit: () => void }) {
     <GameAtmosphere />
     <div className="relative z-10">
       <HostHeader screen={screen} connected={connected} hasStats={completedRounds > 0 && answered > 0} hasPodium={gameFinished && participants.length > 0} onExit={onExit} onGo={setScreen} />
-      {screen === 'editor' && <section className="host-page"><div className="host-heading"><div className="w-full max-w-2xl"><p className="eyebrow">Конструктор игры</p><Input value={quizTitle} onChange={event => setQuizTitle(event.target.value)} className="quiz-title-input" placeholder="Название викторины" /></div><div className="flex flex-wrap gap-3"><Button onClick={shuffle} disabled={questions.length < 2} variant="outline" className="secondary-host-button"><Shuffle /> Перемешать</Button><Button onClick={openLobby} disabled={!canLaunch} className="primary-host-button">Открыть лобби <ChevronRight /></Button></div></div>{questions.length > 0 && <div className="run-order"><span>Порядок запуска</span>{questions.map((_, i) => <b key={i}>{i + 1}</b>)}</div>}<QuestionEditor questions={questions} onChange={setQuestions} /></section>}
-      {screen === 'lobby' && <Lobby roomCode={roomCode} joinUrl={joinUrl} participants={participants} onStart={start} onRegenerate={openLobby} />}
+      {screen === 'editor' && <section className="host-page"><div className="host-heading"><div className="w-full max-w-2xl"><p className="eyebrow">Конструктор игры</p><Input value={quizTitle} onChange={event => setQuizTitle(event.target.value)} className="quiz-title-input" placeholder="Название викторины" /></div><div className="flex flex-wrap gap-3"><Button onClick={shuffle} disabled={questions.length < 2} variant="outline" className="secondary-host-button"><Shuffle /> Перемешать</Button><Button onClick={openLobby} disabled={!canLaunch || opening} className="primary-host-button">{opening ? 'Открываем лобби…' : <>Открыть лобби <ChevronRight /></>}</Button></div></div>{lobbyError && <p className="pin-error-message">{lobbyError}</p>}{questions.length > 0 && <div className="run-order"><span>Порядок запуска</span>{questions.map((_, i) => <b key={i}>{i + 1}</b>)}</div>}<QuestionEditor questions={questions} onChange={setQuestions} /></section>}
+      {screen === 'lobby' && <Lobby roomCode={roomCode} joinUrl={joinUrl} participants={participants} error={lobbyError} onStart={start} onRegenerate={openLobby} />}
       {screen === 'question' && current && <QuestionView question={current} index={questionIndex} total={questions.length} timeLeft={timeLeft} answered={answered} totalPlayers={participants.length} />}
       {screen === 'stats' && current && <StatsView question={current} participants={participants} answered={answered} counts={answerCounts} hasResults={completedRounds > 0 && answered > 0} isLast={questionIndex === questions.length - 1} onNext={next} />}
       {screen === 'podium' && <Podium participants={leaders} available={gameFinished && participants.length > 0} onRestart={() => { setQuestionIndex(0); void openLobby(); }} />}
@@ -103,8 +117,8 @@ function HostHeader({ screen, connected, hasStats, hasPodium, onExit, onGo }: { 
   return <header className="mx-auto flex max-w-7xl flex-wrap items-center gap-4"><button className="brand flex items-center gap-2" onClick={onExit}><span className="brand-mark">Q</span> QUIZO</button><nav className="host-tabs">{tabs.map(tab => { const locked = (tab.id === 'stats' && !hasStats) || (tab.id === 'podium' && !hasPodium); return <button key={tab.id} onClick={() => onGo(tab.id)} className={`${screen === tab.id ? 'active' : ''} ${locked ? 'locked' : ''}`}>{tab.label}{locked && <i />}</button> })}</nav><span className="ml-auto status-pill"><Wifi size={15} />{connected ? 'В эфире' : 'Демо-режим'}</span></header>;
 }
 
-function Lobby({ roomCode, joinUrl, participants, onStart, onRegenerate }: { roomCode: string; joinUrl: string; participants: Participant[]; onStart: () => void; onRegenerate: () => void }) {
-  return <section className="host-page"><div className="grid gap-6 lg:grid-cols-[360px_1fr]"><div className="qr-card"><div className="flex items-center justify-between gap-3"><p className="eyebrow">Комната готова</p><button onClick={onRegenerate} className="refresh-code" title="Создать новую комнату"><RefreshCw size={15}/> Новый код</button></div><h1 className="mt-2 text-3xl font-black">Сканируйте и входите</h1><div className="qr-wrap"><QRCodeSVG key={roomCode} value={joinUrl} size={210} fgColor="#17171f" /></div><p className="text-center text-sm text-white/50">Код комнаты</p><div className="room-code">{roomCode.slice(0,3)} {roomCode.slice(3)}</div></div><div className="panel flex min-h-[570px] flex-col"><div className="flex items-start justify-between"><div><p className="eyebrow">Открытое лобби</p><h2 className="mt-2 text-4xl font-black">Уже в игре: {participants.length}</h2><p className="mt-2 text-white/50">Игроки появятся здесь сразу после подключения.</p></div><Users className="text-violet-300" size={36} /></div><div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">{participants.map((p, i) => <div className="player-chip" key={p.id}><span className={`avatar avatar-${i % 4}`}>{p.name[0]}</span><span className="truncate font-bold">{p.name}</span><span className="online" /></div>)}</div><div className="mt-auto flex items-center justify-between gap-4 pt-8"><span className="flex items-center gap-2 text-sm text-white/45"><Radio size={16} className="text-lime-300" />Ждём остальных</span><Button onClick={onStart} className="primary-host-button h-14 px-8"><Play fill="currentColor" /> Начать игру</Button></div></div></div></section>;
+function Lobby({ roomCode, joinUrl, participants, error, onStart, onRegenerate }: { roomCode: string; joinUrl: string; participants: Participant[]; error: string; onStart: () => void; onRegenerate: () => void }) {
+  return <section className="host-page"><div className="grid gap-6 lg:grid-cols-[360px_1fr]"><div className="qr-card"><div className="flex items-center justify-between gap-3"><p className="eyebrow">Комната готова</p><button onClick={onRegenerate} className="refresh-code" title="Создать новую комнату"><RefreshCw size={15}/> Новый код</button></div><h1 className="mt-2 text-3xl font-black">Сканируйте и входите</h1><div className="qr-wrap"><QRCodeSVG key={roomCode} value={joinUrl} size={210} fgColor="#17171f" /></div><p className="text-center text-sm text-white/50">Код комнаты</p><div className="room-code">{roomCode.slice(0,3)} {roomCode.slice(3)}</div></div><div className="panel flex min-h-[570px] flex-col"><div className="flex items-start justify-between"><div><p className="eyebrow">Открытое лобби</p><h2 className="mt-2 text-4xl font-black">Уже в игре: {participants.length}</h2><p className="mt-2 text-white/50">Игроки появятся здесь сразу после подключения.</p></div><Users className="text-violet-300" size={36} /></div><div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">{participants.map((p, i) => <div className="player-chip" key={p.id}><span className={`avatar avatar-${i % 4}`}>{p.name[0]}</span><span className="truncate font-bold">{p.name}</span><span className="online" /></div>)}</div><div className="mt-auto flex items-center justify-between gap-4 pt-8">{error ? <span className="pin-error-message">{error}</span> : <span className="flex items-center gap-2 text-sm text-white/45"><Radio size={16} className="text-lime-300" />Ждём остальных</span>}<Button onClick={onStart} className="primary-host-button h-14 px-8"><Play fill="currentColor" /> Начать игру</Button></div></div></div></section>;
 }
 
 function QuestionView({ question, index, total, timeLeft, answered, totalPlayers }: { question: Question; index: number; total: number; timeLeft: number; answered: number; totalPlayers: number }) {

@@ -52,7 +52,7 @@ export function PlayerApp({ locale, onLocale, onExit, initialRoom = '' }: { loca
     setJoining(true); setPinError(false);
     let opened = false;
     const ws = new WebSocket(`${WS}/${cleanCode}/?role=player`); socket.current = ws;
-    const connectionTimer = window.setTimeout(() => { if (!opened) ws.close(); }, 5000);
+    const connectionTimer = window.setTimeout(() => { if (!opened) ws.close(); }, 15000);
     ws.onopen = () => { opened = true; window.clearTimeout(connectionTimer); setConnected(true); setJoining(false); setJoinSuccess(true); ws.send(JSON.stringify({ type: 'join_lobby', name: name.trim() })); window.setTimeout(() => setLeavingJoin(true), 450); window.setTimeout(() => setScreen('waiting'), 900); };
     ws.onclose = () => { window.clearTimeout(connectionTimer); setConnected(false); setJoining(false); if (!opened) { setPinError(false); window.requestAnimationFrame(() => setPinError(true)); } };
     ws.onmessage = ({ data }) => {
